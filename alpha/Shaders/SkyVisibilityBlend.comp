@@ -1,0 +1,36 @@
+#version 460 core
+// ============================================================================
+//  THE SKY'S VISIBILITY, FADED FROM THE OLD GRID TO THE NEW
+//
+//  (Renderer/SkyVisibility.) A rebuilt grid used to replace the one the
+//  shading read in a single frame: the sky light in a room changed from one
+//  frame to the next - a flash a person sees as a glitch. The shading reads
+//  this grid instead, eased from what it showed to the new answer over about
+//  half a second. Also a plain copy (u_T 0 or 1, both inputs the same).
+//
+//  A grid that MOVED (it follows the camera) is the same lattice shifted by
+//  whole probes: u_FromOffset is where this probe was in the old grid. A probe
+//  the old grid did not cover has nothing to ease from and takes the new value.
+// ============================================================================
+
+layout(local_size_x = 4, local_size_y = 4, local_size_z = 4) in;
+
+layout(rgba16f, binding = 0) writeonly uniform image3D u_Dst;
+uniform sampler3D u_From;
+uniform sampler3D u_To;
+uniform float u_T;
+uniform vec3  u_DimF;
+uniform vec3  u_FromOffset;     // whole probes, sent as floats
+
+void main() {
+    ivec3 id = ivec3(gl_GlobalInvocationID);
+    ivec3 dim = ivec3(u_DimF);
+    if (any(greaterThanEqual(id, dim))) return;
+    vec4 to = texelFetch(u_To, id, 0);
+    ivec3 from = id + ivec3(round(u_FromOffset));
+    if (any(lessThan(from, ivec3(0))) || any(greaterThanEqual(from, dim))) {
+        imageStore(u_Dst, id, to);
+        return;
+    }
+    imageStore(u_Dst, id, mix(texelFetch(u_From, from, 0), to, u_T));
+}

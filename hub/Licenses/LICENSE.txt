@@ -1,0 +1,355 @@
+====================================================================
+                        FIONA ZI ENGINE
+                   SOURCE LICENSE AGREEMENT
+====================================================================
+
+Version 1.0  -  20 September 2024
+
+Copyright (c) 2024 Nabras ______________________ (the "Author").
+All rights reserved.
+
+The Fiona Zi Engine is the original work of a single independent
+developer. This Agreement sets out the terms on which the Author
+licenses it. It is a licence, not a transfer of ownership: the Author
+remains the owner of the Engine, and the Licensee receives the rights
+written here and nothing else.
+
+This Agreement is between the Author and the person or entity named
+in a License Schedule signed by both (the "Licensee"). A copy of the
+Engine that is not covered by a signed Schedule is not licensed.
+
+An Arabic text of this Agreement is provided in LICENSE.ar.txt. Both
+texts are signed; in the event of any inconsistency, the English text
+prevails unless the Schedule states otherwise.
+
+
+--------------------------------------------------------------------
+1.  DEFINITIONS
+--------------------------------------------------------------------
+
+1.1  "Engine" means the Fiona Zi Engine: the source code, shaders,
+     editor, player, exporter, hub, build scripts, tools, tests and
+     documentation authored by the Author, as delivered to the
+     Licensee at the commit identified in the Schedule, together
+     with any later versions the Author delivers under this
+     Agreement. The Engine does not include the Third-Party
+     Components or the Demo Assets.
+
+1.2  "Third-Party Components" means the libraries, fonts, icons and
+     other works of third parties included with the Engine (chiefly
+     under vendor/), each of which is governed by its own licence as
+     recorded in THIRD-PARTY-NOTICES.txt.
+
+1.3  "Demo Assets" means the models, animations, sounds, images and
+     other content in the sample project (FionaProject/) and anything
+     else described in ASSET-RIGHTS.txt. The Author does not own the
+     Demo Assets and grants no rights in them.
+
+1.4  "Product" means a game, application or other work that the
+     Licensee builds with the Engine and that is not itself the
+     Engine, a game engine, or an engine editor.
+
+1.5  "Marks" means the name "Fiona Zi Engine", the abbreviation
+     "FZE", the F mark and the wordmarks in Resources/Branding.
+
+1.6  "Schedule" means the License Schedule signed by the Author and
+     the Licensee that identifies the Licensee and fixes the options
+     this Agreement leaves open (exclusivity, engine resale, Marks,
+     support, fees). The Schedule forms part of this Agreement; where
+     the two conflict, the Schedule prevails.
+
+1.7  "Effective Date" means the date stated in the Schedule, or if
+     none, the date the Author receives the fee in full.
+
+
+--------------------------------------------------------------------
+2.  OWNERSHIP
+--------------------------------------------------------------------
+
+2.1  The Engine is the Author's original work and the Author's
+     exclusive property. All copyright and other intellectual
+     property rights in the Engine, and in every version of it the
+     Author delivers, remain with the Author.
+
+2.2  Nothing in this Agreement transfers ownership of the Engine, of
+     the Marks or of any right in them. Ownership can be transferred
+     only by a separate written assignment signed by the Author that
+     says so in terms.
+
+2.3  Modifications and derivative works of the Engine made by the
+     Licensee belong to the Licensee, subject always to the Author's
+     rights in the Engine they are made from. The Licensee owns its
+     Products.
+
+2.4  The Author's moral rights - to be identified as the author of
+     the Engine and to object to distortion of it - are not licensed,
+     waived or transferred, and under the applicable law cannot be.
+
+
+--------------------------------------------------------------------
+3.  LICENCE GRANT
+--------------------------------------------------------------------
+
+3.1  Subject to payment of the fee in the Schedule and to the terms
+     of this Agreement, the Author grants the Licensee a perpetual,
+     worldwide, royalty-free licence, exclusive or non-exclusive as
+     the Schedule states, to:
+
+     (a)  use, copy, compile, install and run the Engine;
+
+     (b)  modify the Engine and create derivative works of it;
+
+     (c)  develop, publish, distribute, sell and otherwise exploit
+          Products, without limit on their number, platforms,
+          revenue or the fee paid;
+
+     (d)  distribute with a Product the runtime files a Product needs
+          to run, in binary form;
+
+     (e)  give access to the Engine's source code to the Licensee's
+          employees and contractors, for the Licensee's purposes,
+          under written obligations of confidentiality no less
+          protective than this Agreement.
+
+3.2  ENGINE RESALE. Only if the Schedule states "Engine resale:
+     permitted", the Licensee may also license the Engine, or a
+     derivative engine built from it, to third parties, under its
+     own name and terms, provided that each such licence (i) keeps
+     the notices required by Section 4.1, (ii) passes on the
+     obligations of Sections 4 and 7 to the third party, and (iii)
+     grants the third party no greater rights in the Engine than the
+     Licensee holds. Otherwise the Licensee may not license, sell,
+     lease, lend or otherwise make the Engine or its source code
+     available to any third party except as Section 3.1(e) allows.
+
+3.3  EXCLUSIVITY. If the Schedule states the licence is exclusive,
+     then from the Effective Date the Author will not license the
+     Engine to any other person and will not himself commercialise
+     the Engine, in each case subject to Section 5 (the Author's
+     reserved rights) and Section 6 (prior distributions).
+
+3.4  All rights not expressly granted are reserved by the Author.
+
+
+--------------------------------------------------------------------
+4.  CONDITIONS
+--------------------------------------------------------------------
+
+4.1  NOTICES. The Licensee shall not remove or alter the Author's
+     copyright notice, this Agreement, THIRD-PARTY-NOTICES.txt or
+     ASSET-RIGHTS.txt from any copy of the Engine's source code, and
+     shall reproduce the Author's copyright notice in the source of
+     any derivative engine. No credit to the Author is required
+     inside a Product.
+
+4.2  AUTHORSHIP. The Licensee shall not represent itself or any
+     other person as the author of the Engine, and shall not use the
+     Author's name to endorse or promote a Product or a derivative
+     engine without the Author's written consent. Marketing a
+     Product or a derivative engine under the Licensee's own name is
+     permitted.
+
+4.3  THIRD-PARTY COMPONENTS. The Licensee shall comply with the
+     licence of every Third-Party Component it uses or distributes,
+     including the obligation to ship THIRD-PARTY-NOTICES.txt (or
+     the notices it contains) with anything built on the Engine. The
+     Author gives no rights in the Third-Party Components beyond
+     what their own licences give.
+
+4.4  DEMO ASSETS. The Licensee shall not publish or distribute any
+     Demo Asset without first establishing, on its own account, that
+     it has the right to do so. ASSET-RIGHTS.txt explains why.
+
+4.5  LAWFUL USE. The Licensee shall not use the Engine in breach of
+     any applicable law.
+
+
+--------------------------------------------------------------------
+5.  THE AUTHOR'S RESERVED RIGHTS
+--------------------------------------------------------------------
+
+Whatever the Schedule states about exclusivity, the Author retains
+the following, and the Licensee shall not object to their exercise:
+
+5.1  ownership of the Engine and of the Marks (Section 2), and the
+     moral rights described in Section 2.4;
+
+5.2  the right to keep copies of the Engine for archive, reference
+     and evidence of authorship;
+
+5.3  the right to name the Engine, describe it, and show it - its
+     code, screenshots and recordings - as the Author's own work in
+     a portfolio, curriculum vitae, publication, talk or interview,
+     without disclosing the Licensee's confidential modifications;
+
+5.4  the right to use, in any other work, the general programming
+     techniques, algorithms, ideas, know-how and experience embodied
+     in the Engine. Copyright protects the Engine's expression, not
+     these, and this Agreement does not restrict them;
+
+5.5  the right to use, copy and modify in the Author's own other
+     projects the general-purpose components listed in the Schedule
+     under "Author's reuse", if any are listed there;
+
+5.6  the right to continue using the Engine for the Author's own
+     non-commercial projects. If the Schedule states "Author's own
+     use: unrestricted", this extends to commercial projects that
+     are Products and not a competing engine.
+
+
+--------------------------------------------------------------------
+6.  PRIOR DISTRIBUTIONS
+--------------------------------------------------------------------
+
+6.1  Before the Effective Date the Engine was distributed under an
+     earlier licence: a public alpha in binary form through the
+     Author's former download site, and copies given to persons
+     known to the Author. The Author discloses the distributions
+     known to him in the Schedule.
+
+6.2  Copies distributed before the Effective Date remain under the
+     terms they were received with. The Author is not able to, and
+     does not undertake to, recall them or terminate those terms.
+     An exclusive licence under Section 3.3 is exclusive as against
+     licences the Author grants after the Effective Date.
+
+
+--------------------------------------------------------------------
+7.  THE MARKS
+--------------------------------------------------------------------
+
+7.1  The Marks are the Author's. The Licensee may use the Marks to
+     identify the Engine and to state that a Product is built with
+     it. Any further use of the Marks - including as the name of a
+     derivative engine, a business or a product - is permitted only
+     if the Schedule states "Marks: licensed for the Licensee's
+     business use" or if the Marks are transferred to the Licensee
+     by a separate written assignment.
+
+7.2  Registration by the Licensee of a trade name, trademark,
+     company or commercial register entry containing the Marks is
+     the Licensee's own act and responsibility, requires the Author's
+     prior written consent unless the Schedule grants it, and does
+     not by itself transfer any right in the Marks or the Engine.
+
+
+--------------------------------------------------------------------
+8.  DELIVERY AND SUPPORT
+--------------------------------------------------------------------
+
+8.1  The Author delivers the Engine as a copy of its source
+     repository, including its history, at the commit identified in
+     the Schedule, together with the Third-Party Components and, as
+     is, the Demo Assets.
+
+8.2  The Author has no obligation to maintain, update, support or
+     continue developing the Engine, or to deliver any later version,
+     unless the Schedule states otherwise or a separate written
+     agreement provides for it. Anything the Author chooses to
+     deliver later under this Agreement is licensed on these terms.
+
+
+--------------------------------------------------------------------
+9.  FEES
+--------------------------------------------------------------------
+
+9.1  The Licensee shall pay the Author the fee stated in the
+     Schedule, at the times and in the manner stated there. No other
+     fee or royalty is payable for the rights in Section 3.
+
+9.2  The licence takes effect on the Effective Date. Until the fee is
+     paid in full the Licensee may use the Engine only to evaluate it
+     and shall not release a Product or exercise Section 3.2.
+
+
+--------------------------------------------------------------------
+10. WARRANTIES AND LIABILITY
+--------------------------------------------------------------------
+
+10.1 The Author warrants that, to the best of his knowledge, (a) he
+     is the sole author of the Engine, (b) he has the right to grant
+     this licence, and (c) the Engine, excluding the Third-Party
+     Components and the Demo Assets, does not copy the work of any
+     other person.
+
+10.2 EXCEPT AS STATED IN 10.1, THE ENGINE IS PROVIDED "AS IS". IT IS
+     ALPHA SOFTWARE: IT CONTAINS DEFECTS AND PARTS OF IT WILL CHANGE.
+     THE AUTHOR GIVES NO OTHER WARRANTY OF ANY KIND, EXPRESS OR
+     IMPLIED, INCLUDING ANY WARRANTY OF MERCHANTABILITY, FITNESS FOR
+     A PARTICULAR PURPOSE, PERFORMANCE OR NON-INFRINGEMENT.
+
+10.3 THE AUTHOR IS NOT LIABLE FOR ANY INDIRECT, CONSEQUENTIAL,
+     SPECIAL OR INCIDENTAL LOSS, OR FOR LOSS OF DATA, PROFIT, REVENUE
+     OR BUSINESS, ARISING OUT OF THIS AGREEMENT OR THE USE OF THE
+     ENGINE. THE AUTHOR'S TOTAL LIABILITY UNDER THIS AGREEMENT SHALL
+     NOT EXCEED THE FEE THE LICENSEE HAS PAID.
+
+10.4 Nothing in this Section excludes liability that cannot be
+     excluded by the applicable law.
+
+
+--------------------------------------------------------------------
+11. TERM AND TERMINATION
+--------------------------------------------------------------------
+
+11.1 This Agreement lasts for the full term of copyright in the
+     Engine unless terminated under this Section.
+
+11.2 The Author may terminate this Agreement by written notice if
+     the Licensee (a) fails to pay the fee when due and does not pay
+     within thirty (30) days of a written reminder, or (b) commits a
+     material breach of Section 3.2, 4.1, 4.2 or 7 and does not cure
+     it within thirty (30) days of written notice describing it.
+
+11.3 On termination the Licensee shall stop using the Engine's
+     source code and destroy its copies, and the rights in Section 3
+     end. Products released before termination may continue to be
+     distributed, with the runtime files they already contain.
+     Licences the Licensee validly granted to third parties under
+     Section 3.2 before termination survive on their terms.
+     Sections 2, 4.1, 4.2, 5, 6, 10, 11.3 and 12 survive.
+
+
+--------------------------------------------------------------------
+12. GENERAL
+--------------------------------------------------------------------
+
+12.1 ENTIRE AGREEMENT. This Agreement, with its Schedule, is the
+     whole agreement between the parties about the Engine and
+     replaces every earlier licence, statement or understanding
+     between them about it. It does not affect Section 6.
+
+12.2 AMENDMENT AND WAIVER. A change to this Agreement is valid only
+     if in writing and signed by both parties. A failure to enforce
+     a term is not a waiver of it.
+
+12.3 ASSIGNMENT. The Licensee may transfer this Agreement as a whole
+     to a company or other entity that the Licensee owns or controls,
+     or to a successor of its whole business, by written notice to
+     the Author; any other transfer needs the Author's written
+     consent. The Author may assign his rights under this Agreement,
+     and ownership of the Engine, to a successor who takes them
+     subject to this Agreement.
+
+12.4 SEVERABILITY. If a term is held invalid, the rest of this
+     Agreement stands, and the term is read as narrowly as needed to
+     make it valid.
+
+12.5 NOTICES. Notices are in writing to the addresses in the
+     Schedule, by hand, courier or e-mail with confirmation.
+
+12.6 GOVERNING LAW AND DISPUTES. This Agreement is governed by the
+     laws of the Sultanate of Oman. The parties shall try in good
+     faith to resolve any dispute by discussion; failing that, the
+     courts of the Sultanate of Oman have jurisdiction, unless the
+     Schedule provides for arbitration.
+
+12.7 LANGUAGE. This Agreement is executed in English and in Arabic.
+     The Schedule states which text prevails; absent a statement,
+     the English text prevails.
+
+
+====================================================================
+
+Nabras
+Author of the Fiona Zi Engine

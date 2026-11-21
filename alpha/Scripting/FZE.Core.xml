@@ -1,0 +1,1145 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>FZE.Core</name>
+    </assembly>
+    <members>
+        <member name="T:FZE.IAsset">
+            <summary>
+            A file of the project that a script field points at. In the Inspector the
+            field is a slot: drag the file onto it from the Content Browser, or press
+            the circle beside it and pick one. The script holds the file's path, so the
+            field goes wherever a path goes - Audio.PlaySound(Shot, 1, 1),
+            Entity.Instantiate(Enemy, at) - with no conversion written.
+            </summary>
+        </member>
+        <member name="P:FZE.IAsset.Path">
+            <summary>The file, relative to the project ("Assets/Audio/shot.wav"); "" when none was picked.</summary>
+        </member>
+        <member name="T:FZE.Prefab">
+            <summary>A .fzeprefab: an object, with its children and components, to make copies of.</summary>
+        </member>
+        <member name="M:FZE.Prefab.Spawn(System.Numerics.Vector3)">
+            <summary>A copy of the prefab in the scene, at `position`.</summary>
+        </member>
+        <member name="T:FZE.Sound">
+            <summary>A sound file (.wav, .ogg, .mp3, .flac).</summary>
+        </member>
+        <member name="T:FZE.Model">
+            <summary>A 3D model (.glb, .gltf, .fbx, .obj).</summary>
+        </member>
+        <member name="T:FZE.Texture">
+            <summary>An image (.png, .jpg, .tga...).</summary>
+        </member>
+        <member name="T:FZE.Effect">
+            <summary>A visual effect (.fzefx, or an Effekseer .efk).</summary>
+        </member>
+        <member name="T:FZE.Entity">
+             <summary>
+             An object in the scene. Only its id: the object itself lives in the
+             engine, so an Entity kept after the object was deleted points at nothing
+             (IsValid says so) instead of at freed memory - the same rule the graph's
+             object references follow.
+            
+             What an entity can do is generated from the engine's own list of
+             functions (Generated/EngineAPI.g.cs): GetPosition, SetPosition, Damage,
+             Jump, PlayClip... - one method per node in the graph palette.
+             </summary>
+        </member>
+        <member name="P:FZE.Entity.Exists">
+            <summary>True while this points at an object that exists.</summary>
+        </member>
+        <member name="P:FZE.Entity.Position">
+            <summary>In the parent's space; see WorldPosition for where it is on screen.</summary>
+        </member>
+        <member name="P:FZE.Entity.Rotation">
+            <summary>Euler angles, in degrees.</summary>
+        </member>
+        <member name="P:FZE.Entity.Parent">
+            <summary>
+            The object this one hangs under (Entity.None at the root). Setting it
+            keeps the object where it is in the world, as dragging it in the
+            Outliner does; SetParent(parent, false) keeps its local numbers instead.
+            </summary>
+        </member>
+        <member name="M:FZE.Entity.GetPosition">
+            <summary>Where this object is, in its parent's space.</summary>
+        </member>
+        <member name="M:FZE.Entity.GetRotation">
+            <summary>Euler angles, in degrees.</summary>
+        </member>
+        <member name="M:FZE.Entity.SetPosition(System.Numerics.Vector3)">
+            <summary>Moves this object. The same transform the gizmo writes.</summary>
+        </member>
+        <member name="M:FZE.Entity.Translate(System.Numerics.Vector3)">
+            <summary>Adds to the position, rather than replacing it.</summary>
+        </member>
+        <member name="M:FZE.Entity.GetTag">
+            <summary>The tag scripts find this object by.</summary>
+        </member>
+        <member name="M:FZE.Entity.GetParent">
+            <summary>The object this one is attached to; nothing at the root.</summary>
+        </member>
+        <member name="M:FZE.Entity.FindByName(System.String)">
+            <summary>The first object with this name, or nothing.</summary>
+        </member>
+        <member name="M:FZE.Entity.FindAllWithTag(System.String)">
+            <summary>Every object carrying this tag, as a list.</summary>
+        </member>
+        <member name="M:FZE.Entity.IsValid(FZE.Entity)">
+            <summary>True while the reference points at something that exists.</summary>
+        </member>
+        <member name="M:FZE.Entity.Create(System.String,System.String,System.Numerics.Vector3)">
+            <summary>Makes an object: Shape is cube, sphere, cylinder, cone, plane, torus, a model's path, or empty for none. Usable at once.</summary>
+        </member>
+        <member name="M:FZE.Entity.Instantiate(System.String,System.Numerics.Vector3)">
+            <summary>A copy of a .fzeprefab - the object and everything under it.</summary>
+        </member>
+        <member name="M:FZE.Entity.Clone(System.Numerics.Vector3)">
+            <summary>A copy of this object and its children, at Position.</summary>
+        </member>
+        <member name="M:FZE.Entity.Destroy(System.Single)">
+            <summary>Removes this object and its children - at the end of the frame, or after the delay.</summary>
+        </member>
+        <member name="M:FZE.Entity.SetParent(FZE.Entity,System.Boolean)">
+            <summary>Attaches this object under another (nothing = the root). Keep World leaves it where it is on screen.</summary>
+        </member>
+        <member name="M:FZE.Entity.GetChildren">
+            <summary>The objects directly under this one.</summary>
+        </member>
+        <member name="M:FZE.Entity.FindChild(System.String)">
+            <summary>An object anywhere under this one, by name.</summary>
+        </member>
+        <member name="M:FZE.Entity.GetWorldPosition">
+            <summary>Where this object is in the world, parents included.</summary>
+        </member>
+        <member name="M:FZE.Entity.AddComponent(System.String)">
+            <summary>Rigidbody, Collider, Light, Camera, Audio Source, Character Controller, Player Controller, UI Canvas, Visual Effect... The same list as the Inspector's Add Component.</summary>
+        </member>
+        <member name="M:FZE.Entity.SetModel(System.String)">
+            <summary>Shows a model file on this object.</summary>
+        </member>
+        <member name="M:FZE.Entity.AddScript(System.String)">
+            <summary>Runs a graph (a .fzscript path) or a C# Script class on this object, from the next frame.</summary>
+        </member>
+        <member name="M:FZE.Entity.RaiseEvent(System.String,System.Object[])">
+            <summary>
+            Raises a custom event of the graph on this object, with arguments for
+            its parameters in order - what a graph's "Call Event" node does. False
+            when the object has no graph or its graph has no event by that name.
+            </summary>
+        </member>
+        <member name="M:FZE.Entity.HasVariable(System.String)">
+            <summary>True when the graph on this object has a variable by that name.</summary>
+        </member>
+        <member name="M:FZE.Entity.GetVariable``1(System.String)">
+            <summary>
+            A variable of the graph on this object - this object's own value, not
+            the graph's default. Throws when there is no such variable, so a
+            mistyped name is an error with the name in it, not a silent zero.
+            </summary>
+        </member>
+        <member name="M:FZE.Entity.SetVariable(System.String,System.Object)">
+            <summary>
+            Sets a variable of the graph on this object, converted to the
+            variable's own type. Throws when there is no such variable.
+            </summary>
+        </member>
+        <member name="T:FZE.Components">
+            <summary>The names AddComponent, RemoveComponent and HasComponent take.</summary>
+        </member>
+        <member name="T:FZE.Shapes">
+            <summary>The shapes Entity.Create makes; anything else is taken as a model's path.</summary>
+        </member>
+        <member name="T:FZE.AI">
+            <summary>The engine's AI functions - the graph's AI nodes.</summary>
+        </member>
+        <member name="M:FZE.AI.SetAIParam(FZE.Entity,System.String,System.Single)">
+            <summary>walkSpeed, runSpeed, turnSpeed, viewDistance, viewAngle, hearingRange, detectionTime, damage, range, optimalRange, accuracy, shotInterval, burstSize, burstPause, aimTime, aggression, retreatHealth, voiceVolume, ranged, health (and the first AI's names: moveSpeed, wanderSpeed, visionRange, attackDamage...).</summary>
+        </member>
+        <member name="M:FZE.AI.GetAIState(FZE.Entity)">
+            <summary>Idle, Wander, Chase, Attack, Alert or Dead.</summary>
+        </member>
+        <member name="M:FZE.AI.AISeesTarget(FZE.Entity)">
+            <summary>True while it can see who it is dealing with.</summary>
+        </member>
+        <member name="M:FZE.AI.GetTarget(FZE.Entity)">
+            <summary>Who it is dealing with (none when calm).</summary>
+        </member>
+        <member name="M:FZE.AI.GetAlertLevel(FZE.Entity)">
+            <summary>0 calm, 1 suspicious, 2 searching, 3 in combat.</summary>
+        </member>
+        <member name="M:FZE.AI.GetActivity(FZE.Entity)">
+            <summary>Where its behaviour tree is: "Soldier &gt; Engage &gt; Fire".</summary>
+        </member>
+        <member name="M:FZE.AI.MoveTo(FZE.Entity,System.Numerics.Vector3,System.Boolean)">
+            <summary>Walk (or run) there by its own navigation - for an agent whose Behavior is none.</summary>
+        </member>
+        <member name="M:FZE.AI.SetAIKey(FZE.Entity,System.String,System.Single)">
+            <summary>A number on its blackboard, for its tree to read.</summary>
+        </member>
+        <member name="M:FZE.AI.MakeNoise(System.Numerics.Vector3,System.Single)">
+            <summary>A sound the AI can hear (1 = a gunshot). Agents in earshot come to look.</summary>
+        </member>
+        <member name="M:FZE.AI.RaiseAlarm(System.Numerics.Vector3,System.Single)">
+            <summary>Every agent within Radius knows something is wrong there.</summary>
+        </member>
+        <member name="M:FZE.AI.SetAttitude(System.String,System.String,System.String)">
+            <summary>hostile, neutral or friendly - both ways. Teams: Player, Enemy, Ally, Civilian, Infected, Wildlife.</summary>
+        </member>
+        <member name="T:FZE.Animation">
+            <summary>The engine's Animation functions - the graph's Animation nodes.</summary>
+        </member>
+        <member name="M:FZE.Animation.PlayClip(FZE.Entity,System.String,System.Single)">
+            <summary>Plays a keyframe clip by name, cross-fading over Blend Seconds.</summary>
+        </member>
+        <member name="M:FZE.Animation.RequestState(FZE.Entity,System.String)">
+            <summary>Asks the animator to go to a state of its graph.</summary>
+        </member>
+        <member name="M:FZE.Animation.SetAnimParam(FZE.Entity,System.String,System.Single)">
+            <summary>Sets one of the animator's parameters - a blend space axis, a condition.</summary>
+        </member>
+        <member name="M:FZE.Animation.AnimFinished(FZE.Entity)">
+            <summary>True once a clip that plays once has reached its end.</summary>
+        </member>
+        <member name="M:FZE.Animation.PlayClipIndex(FZE.Entity,System.Int32,System.Single)">
+            <summary>A skinned clip by index; leaves the state machine.</summary>
+        </member>
+        <member name="M:FZE.Animation.ClipProgress(FZE.Entity)">
+            <summary>0..1 through the keyframe clip.</summary>
+        </member>
+        <member name="M:FZE.Animation.Layer(FZE.Entity,System.String,System.String,System.String,System.Single,System.Single,System.Boolean)">
+            <summary>Plays a state on the bones under Mask Root only; the same Key retargets the layer.</summary>
+        </member>
+        <member name="M:FZE.Animation.LayerStop(FZE.Entity,System.String)">
+            <summary>Fades a layer out; no key stops every layer.</summary>
+        </member>
+        <member name="M:FZE.Animation.Upper(FZE.Entity,System.String)">
+            <summary>A state on the upper-body layer; the legs keep walking.</summary>
+        </member>
+        <member name="M:FZE.Animation.Locomotion(FZE.Entity,System.String,System.String,System.String,System.Single)">
+            <summary>Picks idle, walk or run from how fast the body moves; gives the state chosen.</summary>
+        </member>
+        <member name="T:FZE.Audio">
+            <summary>The engine's Audio functions - the graph's Audio nodes.</summary>
+        </member>
+        <member name="M:FZE.Audio.PlaySound(System.String,System.Single,System.Single)">
+            <summary>A one-shot on the SFX bus.</summary>
+        </member>
+        <member name="M:FZE.Audio.PlaySoundAt(System.String,System.Numerics.Vector3,System.Single)">
+            <summary>A one-shot in the world, heard from where it is.</summary>
+        </member>
+        <member name="M:FZE.Audio.SetBusVolume(System.String,System.Single)">
+            <summary>master, music, sfx or ui.</summary>
+        </member>
+        <member name="M:FZE.Audio.PlaySoundHandle(System.String,System.Single,System.Single,System.Boolean,System.String)">
+            <summary>Starts a sound and gives a handle to control it by.</summary>
+        </member>
+        <member name="M:FZE.Audio.PlaySoundAtHandle(System.String,System.Numerics.Vector3,System.Single,System.Single,System.Single,System.Boolean)">
+            <summary>A sound in the world, with a handle.</summary>
+        </member>
+        <member name="M:FZE.Audio.PlaySoundFollowing(System.String,FZE.Entity,System.Single,System.Single,System.Boolean)">
+            <summary>A sound glued to an object.</summary>
+        </member>
+        <member name="M:FZE.Audio.PlayUISound(System.String,System.Single)">
+            <summary>A one-shot on the UI bus.</summary>
+        </member>
+        <member name="T:FZE.Bones">
+            <summary>The engine's Bones functions - the graph's Bones nodes.</summary>
+        </member>
+        <member name="M:FZE.Bones.Rotate(FZE.Entity,System.String,System.Numerics.Vector3)">
+            <summary>An additive local rotation over the animation.</summary>
+        </member>
+        <member name="M:FZE.Bones.Scale(FZE.Entity,System.String,System.Numerics.Vector3)">
+            <summary>Multiplied on; 1,1,1 is neutral.</summary>
+        </member>
+        <member name="M:FZE.Bones.Weight(FZE.Entity,System.String,System.Single)">
+            <summary>How much of the override applies, 0..1.</summary>
+        </member>
+        <member name="M:FZE.Bones.Reset(FZE.Entity,System.String)">
+            <summary>Drops one bone's override; no bone drops them all.</summary>
+        </member>
+        <member name="M:FZE.Bones.Rotation(FZE.Entity,System.String)">
+            <summary>The override's euler, read back.</summary>
+        </member>
+        <member name="M:FZE.Bones.LookAt(FZE.Entity,System.String,System.Numerics.Vector3,System.Single)">
+            <summary>Aims a bone at a point.</summary>
+        </member>
+        <member name="M:FZE.Bones.AimAxis(FZE.Entity,System.String,System.Numerics.Vector3)">
+            <summary>Which local axis of the bone points at the target.</summary>
+        </member>
+        <member name="M:FZE.Bones.IK(FZE.Entity,System.String,System.Numerics.Vector3,System.Single)">
+            <summary>Reaches a limb to a world point; Effector is the end of the chain.</summary>
+        </member>
+        <member name="M:FZE.Bones.RestPosition(FZE.Entity,System.String)">
+            <summary>The bind pose position, in model space.</summary>
+        </member>
+        <member name="T:FZE.Camera">
+            <summary>The engine's Camera functions - the graph's Camera nodes.</summary>
+        </member>
+        <member name="M:FZE.Camera.Shake(System.Single)">
+            <summary>A shake of 0..1; it fades on its own.</summary>
+        </member>
+        <member name="M:FZE.Camera.ShakeAt(System.Numerics.Vector3,System.Single,System.Single)">
+            <summary>A shake from a place: full strength there, nothing beyond Radius.</summary>
+        </member>
+        <member name="M:FZE.Camera.Recoil(System.Single)">
+            <summary>One shot's kick, from the live camera's recoil pattern. The view returns on its own.</summary>
+        </member>
+        <member name="M:FZE.Camera.SetArm(System.Single)">
+            <summary>The spring arm's length: 0 puts the view in the character's eyes.</summary>
+        </member>
+        <member name="M:FZE.Camera.SetEye(System.Numerics.Vector3)">
+            <summary>Moves the view from where the arm puts it: the sway of a body working, with nothing drawn.</summary>
+        </member>
+        <member name="M:FZE.Camera.SetFOV(System.Single)">
+            <summary>On the live camera; below 0 = back to its own.</summary>
+        </member>
+        <member name="M:FZE.Camera.SetExposure(System.Single)">
+            <summary>The scene's exposure: sunny day 15, overcast 12, interior 7, night street 3. Higher is darker.</summary>
+        </member>
+        <member name="M:FZE.Camera.Exposure">
+            <summary>The scene's exposure, EV100.</summary>
+        </member>
+        <member name="M:FZE.Camera.ExposeForLight">
+            <summary>Reads the sun and sky once, as a light meter would, and sets the exposure to it.</summary>
+        </member>
+        <member name="M:FZE.Camera.Position">
+            <summary>Where the live camera is.</summary>
+        </member>
+        <member name="M:FZE.Camera.Forward">
+            <summary>Where it looks.</summary>
+        </member>
+        <member name="M:FZE.Camera.Activate(System.String)">
+            <summary>Makes that camera the live one; it arrives with its own blend.</summary>
+        </member>
+        <member name="M:FZE.Camera.BlendTo(System.String,System.Single)">
+            <summary>Makes that camera live, easing across over Seconds.</summary>
+        </member>
+        <member name="M:FZE.Camera.SetTarget(FZE.Entity)">
+            <summary>What the live camera's Spring Arm and Look At follow.</summary>
+        </member>
+        <member name="M:FZE.Camera.Roll(System.Single)">
+            <summary>A dutch angle.</summary>
+        </member>
+        <member name="M:FZE.Camera.Ray(System.Single,System.Single,System.Single,System.Single)">
+            <summary>Distance to the first hit along a view-relative direction, or Max Distance.</summary>
+        </member>
+        <member name="T:FZE.Effects">
+            <summary>The engine's Effects functions - the graph's Effects nodes.</summary>
+        </member>
+        <member name="M:FZE.Effects.Play(System.String,System.Numerics.Vector3,System.Numerics.Vector3,System.Single)">
+            <summary>Plays an effect (a .fzefx, an .efk or a built-in name like Fire) and returns it, pointing its up axis along Direction.</summary>
+        </member>
+        <member name="M:FZE.Effects.Burst(System.String,System.Numerics.Vector3,System.Numerics.Vector3)">
+            <summary>A one-shot built-in effect aimed along Direction: Impact, Blood, Bullet Hole, Muzzle Flash...</summary>
+        </member>
+        <member name="M:FZE.Effects.SetFloat(System.Int32,System.String,System.Single)">
+            <summary>Sets one of the effect's exposed parameters for this instance.</summary>
+        </member>
+        <member name="T:FZE.Gameplay">
+            <summary>The engine's Gameplay functions - the graph's Gameplay nodes.</summary>
+        </member>
+        <member name="M:FZE.Gameplay.Damage(FZE.Entity,System.Single)">
+            <summary>Takes Amount off Health, never below 0; marks Dead at 0. Gives what is left.</summary>
+        </member>
+        <member name="M:FZE.Gameplay.Heal(FZE.Entity,System.Single)">
+            <summary>Adds Amount to Health, never above Max; clears Dead above 0.</summary>
+        </member>
+        <member name="M:FZE.Gameplay.Revive(FZE.Entity,System.Single)">
+            <summary>Brings the object back with this much Health (0 = full); an AI starts its life over.</summary>
+        </member>
+        <member name="M:FZE.Gameplay.Shoot(FZE.Entity,System.String,System.Numerics.Vector3,System.Numerics.Vector3,System.Single,System.Single,System.Single,System.Single,System.Single)">
+            <summary>Fires a projectile mesh from a point along a direction; it is spawned at the end of the frame.</summary>
+        </member>
+        <member name="M:FZE.Gameplay.MoveSolid(FZE.Entity,System.Numerics.Vector3)">
+            <summary>Moves to a point but pushed out of every collider - a carried object stays against a wall.</summary>
+        </member>
+        <member name="M:FZE.Gameplay.Rotate(FZE.Entity,System.Numerics.Vector3)">
+            <summary>Adds to the rotation.</summary>
+        </member>
+        <member name="M:FZE.Gameplay.LookAt(FZE.Entity,FZE.Entity)">
+            <summary>Turns (yaw only) to face another object.</summary>
+        </member>
+        <member name="M:FZE.Gameplay.Forward(FZE.Entity)">
+            <summary>Where this object faces: -Z rotated by its rotation.</summary>
+        </member>
+        <member name="M:FZE.Gameplay.Up(FZE.Entity)">
+            <summary>Its own up: +Y rotated by its rotation. On its side, this lies flat.</summary>
+        </member>
+        <member name="M:FZE.Gameplay.HoldInView(FZE.Entity,System.Numerics.Vector3,System.Numerics.Vector3)">
+            <summary>Carries this object in front of the camera: metres right, up and forward, degrees on top of its turn.</summary>
+        </member>
+        <member name="M:FZE.Gameplay.SetQuaternion(FZE.Entity,System.Numerics.Vector4)">
+            <summary>Orientation as a quaternion - for anything that rolls, where eulers added up drift.</summary>
+        </member>
+        <member name="M:FZE.Gameplay.Attach(FZE.Entity,FZE.Entity,System.String)">
+            <summary>Sockets this object onto a bone of another object's skeleton. No target detaches.</summary>
+        </member>
+        <member name="M:FZE.Gameplay.AttachOffset(FZE.Entity,System.Numerics.Vector3,System.Numerics.Vector3,System.Numerics.Vector3)">
+            <summary>Poses the socket in the bone's space.</summary>
+        </member>
+        <member name="M:FZE.Gameplay.SetColor(FZE.Entity,System.Numerics.Vector3)">
+            <summary>The base colour of the mesh (or the tint of a skinned body).</summary>
+        </member>
+        <member name="M:FZE.Gameplay.SetUV(FZE.Entity,System.Numerics.Vector2,System.Numerics.Vector2)">
+            <summary>How the colour map lies on the mesh: how many times it repeats, and how far it is shifted. Moving the shift every frame moves the picture: a conveyor's rubber, water in a pipe.</summary>
+        </member>
+        <member name="M:FZE.Gameplay.SetCastShadow(FZE.Entity,System.Boolean)">
+            <summary>Whether this mesh casts a shadow. Something that moves all the time and casts has the sun's shadow drawn again every frame.</summary>
+        </member>
+        <member name="M:FZE.Gameplay.SetEmissive(FZE.Entity,System.Numerics.Vector3,System.Single)">
+            <summary>Makes the surface glow. 0 keeps the strength.</summary>
+        </member>
+        <member name="M:FZE.Gameplay.SetPrimitive(FZE.Entity,System.String)">
+            <summary>cube, sphere, cylinder, cone, plane or torus.</summary>
+        </member>
+        <member name="M:FZE.Gameplay.ShapeSize(FZE.Entity)">
+            <summary>The box a primitive fills, in world units.</summary>
+        </member>
+        <member name="M:FZE.Gameplay.LightSet(FZE.Entity,System.String,System.Single)">
+            <summary>intensity, temperature, range, inner, outer or enabled; on the Sun also hours and timescale.</summary>
+        </member>
+        <member name="M:FZE.Gameplay.AimedEntity(FZE.Entity,System.Single,System.String)">
+            <summary>What the middle of the screen points at, within reach; nothing otherwise.</summary>
+        </member>
+        <member name="M:FZE.Gameplay.AimedBone(FZE.Entity,System.Single,System.String)">
+            <summary>Which part of a character the middle of the screen is on: head, neck, spine2 (chest), arml, forearmr, uplegl... Empty when it is on no character.</summary>
+        </member>
+        <member name="M:FZE.Gameplay.CharacterSet(FZE.Entity,System.String,System.Single)">
+            <summary>walkSpeed, sprintSpeed, crouchSpeed, acceleration, deceleration, groundFriction, airControl, jumpHeight, maxJumps, gravityScale, height, radius, stepHeight, maxSlope, turnSpeed, turnToMovement; and the Player Controller's sensitivity, maxPitch, invertY.</summary>
+        </member>
+        <member name="M:FZE.Gameplay.GetLook(FZE.Entity)">
+            <summary>Yaw and pitch the character looks along, in degrees.</summary>
+        </member>
+        <member name="M:FZE.Gameplay.SetLook(FZE.Entity,System.Single,System.Single)">
+            <summary>Aims the head; pitch is clamped to the controller's own limit.</summary>
+        </member>
+        <member name="M:FZE.Gameplay.FreezePlayer(System.Boolean)">
+            <summary>Stops the character reading input; it still falls.</summary>
+        </member>
+        <member name="M:FZE.Gameplay.PlayerHealth">
+            <summary>The player's Health.</summary>
+        </member>
+        <member name="M:FZE.Gameplay.IsEditor">
+            <summary>True inside the editor's Play, false in the shipped game.</summary>
+        </member>
+        <member name="T:FZE.Ground">
+            <summary>The engine's Ground functions - the graph's Ground nodes.</summary>
+        </member>
+        <member name="M:FZE.Ground.SurfaceAt(System.Numerics.Vector3)">
+            <summary>What the ground under a point is: Grass, Asphalt, Dirt, Sand, Water... - the terrain's painted layer or the object's material. None when nothing is under it.</summary>
+        </member>
+        <member name="M:FZE.Ground.WetnessAt(System.Numerics.Vector3)">
+            <summary>How wet the ground there is: 0 dry, 1 soaked or standing in puddles.</summary>
+        </member>
+        <member name="M:FZE.Ground.SnowAt(System.Numerics.Vector3)">
+            <summary>How much snow lies there.</summary>
+        </member>
+        <member name="T:FZE.Input">
+            <summary>The engine's Input functions - the graph's Input nodes.</summary>
+        </member>
+        <member name="M:FZE.Input.Action(System.String)">
+            <summary>Is the action held now.</summary>
+        </member>
+        <member name="M:FZE.Input.ActionPressed(System.String)">
+            <summary>Went down this frame.</summary>
+        </member>
+        <member name="M:FZE.Input.ActionReleased(System.String)">
+            <summary>Came up this frame.</summary>
+        </member>
+        <member name="M:FZE.Input.Key(System.String)">
+            <summary>A letter, or space, shift, escape...</summary>
+        </member>
+        <member name="M:FZE.Input.MouseDelta">
+            <summary>How far the mouse moved this frame.</summary>
+        </member>
+        <member name="M:FZE.Input.MouseButton(System.String)">
+            <summary>left, right or middle - held now.</summary>
+        </member>
+        <member name="M:FZE.Input.MouseInUI(System.Single)">
+            <summary>The pointer in canvas units, from the centre.</summary>
+        </member>
+        <member name="M:FZE.Input.HideCursor(System.Boolean)">
+            <summary>Hides the pointer; it still moves and clicks.</summary>
+        </member>
+        <member name="M:FZE.Input.PadButton(System.String)">
+            <summary>A raw gamepad button by name.</summary>
+        </member>
+        <member name="M:FZE.Input.PadAxis(System.String)">
+            <summary>A raw gamepad axis by name.</summary>
+        </member>
+        <member name="M:FZE.Input.TextEdit(System.String,System.Int32,System.Boolean)">
+            <summary>Current with everything typed since last frame applied - a text field in one node.</summary>
+        </member>
+        <member name="M:FZE.Input.Actions">
+            <summary>Every action's name.</summary>
+        </member>
+        <member name="M:FZE.Input.Binding(System.String,System.String)">
+            <summary>What an action is bound to (device: any, keyboard, pad).</summary>
+        </member>
+        <member name="M:FZE.Input.Rebind(System.String,System.String)">
+            <summary>Listens for the next key or button.</summary>
+        </member>
+        <member name="M:FZE.Input.Capturing">
+            <summary>True while Rebind waits.</summary>
+        </member>
+        <member name="M:FZE.Input.Defaults">
+            <summary>Every binding back to default.</summary>
+        </member>
+        <member name="M:FZE.Input.Save">
+            <summary>Writes the bindings so they survive.</summary>
+        </member>
+        <member name="M:FZE.Input.Define(System.String,System.String,System.String,System.String)">
+            <summary>A game's own action; keys, mouse and pad are comma-separated numbers. Replaces one of that name.</summary>
+        </member>
+        <member name="M:FZE.Input.TestKey(System.String,System.Boolean)">
+            <summary>A test pressing a key, as a player would.</summary>
+        </member>
+        <member name="M:FZE.Input.TestButton(System.Int32,System.Boolean)">
+            <summary>A test pressing a mouse button: 0 left, 1 right.</summary>
+        </member>
+        <member name="M:FZE.Input.TestPad(System.String,System.Boolean)">
+            <summary>A test pressing a gamepad button by name.</summary>
+        </member>
+        <member name="M:FZE.Input.TestPointer(System.Numerics.Vector2)">
+            <summary>A test placing the pointer; x below 0 gives it back.</summary>
+        </member>
+        <member name="M:FZE.Input.TestWheel(System.Single)">
+            <summary>A test turning the mouse wheel.</summary>
+        </member>
+        <member name="M:FZE.Input.Wheel">
+            <summary>Notches of the mouse wheel this frame; up is positive.</summary>
+        </member>
+        <member name="M:FZE.Input.Pointer">
+            <summary>Where the pointer is on the picture, in pixels.</summary>
+        </member>
+        <member name="M:FZE.Input.OwnEscape(System.Boolean)">
+            <summary>This game answers Escape itself (a pause menu).</summary>
+        </member>
+        <member name="T:FZE.Joint">
+            <summary>The engine's Joint functions - the graph's Joint nodes.</summary>
+        </member>
+        <member name="M:FZE.Joint.SetMotor(FZE.Entity,System.Single)">
+            <summary>The joint's motor target: a hinge's speed (deg/s) or angle (deg), a slider's speed (m/s) or place (m).</summary>
+        </member>
+        <member name="T:FZE.Mathf">
+            <summary>The engine's Math functions - the graph's Math nodes.</summary>
+        </member>
+        <member name="M:FZE.Mathf.Cross(System.Numerics.Vector3,System.Numerics.Vector3)">
+            <summary>The vector at right angles to both: Forward x Up is Right.</summary>
+        </member>
+        <member name="M:FZE.Mathf.MakeVector2(System.Single,System.Single)">
+            <summary>A Vector2 from two numbers: a UI offset or size, a screen point.</summary>
+        </member>
+        <member name="M:FZE.Mathf.Vector2X(System.Numerics.Vector2)">
+            <summary>The X of a Vector2 (a mouse delta, a screen point).</summary>
+        </member>
+        <member name="M:FZE.Mathf.SmoothStep(System.Single,System.Single,System.Single)">
+            <summary>0 to 1 between the edges, eased at both ends.</summary>
+        </member>
+        <member name="M:FZE.Mathf.MakeQuat(System.Numerics.Vector3,System.Single)">
+            <summary>A turn about an axis, as a quaternion (x y z w).</summary>
+        </member>
+        <member name="M:FZE.Mathf.QuatMultiply(System.Numerics.Vector4,System.Numerics.Vector4)">
+            <summary>A applied after B - accumulate a roll with the new turn as A.</summary>
+        </member>
+        <member name="M:FZE.Mathf.Truncate(System.Single)">
+            <summary>Float to Int, dropping the fraction - the one visible way.</summary>
+        </member>
+        <member name="M:FZE.Mathf.Approach(System.Single,System.Single,System.Single)">
+            <summary>Moves Current toward Target by at most Max Delta.</summary>
+        </member>
+        <member name="T:FZE.Networking">
+            <summary>The engine's Networking functions - the graph's Networking nodes.</summary>
+        </member>
+        <member name="M:FZE.Networking.PlayerId">
+            <summary>My id; the host is 0.</summary>
+        </member>
+        <member name="M:FZE.Networking.SetVar(System.String,System.String)">
+            <summary>A value replicated to every peer.</summary>
+        </member>
+        <member name="M:FZE.Networking.ReceiveChat">
+            <summary>The next message, or empty.</summary>
+        </member>
+        <member name="M:FZE.Networking.SetState(System.Single[])">
+            <summary>Up to 12 numbers describing my character; every peer runs the same rig on them.</summary>
+        </member>
+        <member name="M:FZE.Networking.GetState(System.Int32)">
+            <summary>That player's numbers; empty while silent.</summary>
+        </member>
+        <member name="M:FZE.Networking.HostOnline(System.String,System.Int32,System.Boolean,System.String)">
+            <summary>Hosts through the signal server; no port forwarding.</summary>
+        </member>
+        <member name="M:FZE.Networking.OnlineStatus">
+            <summary>For the player.</summary>
+        </member>
+        <member name="M:FZE.Networking.OnlineDetail">
+            <summary>For a log.</summary>
+        </member>
+        <member name="M:FZE.Networking.JoinCode">
+            <summary>A fresh six-character code.</summary>
+        </member>
+        <member name="T:FZE.Physics">
+            <summary>The engine's Physics functions - the graph's Physics nodes.</summary>
+        </member>
+        <member name="M:FZE.Physics.AddImpulse(FZE.Entity,System.Numerics.Vector3)">
+            <summary>A one-off push on the rigidbody, applied by the next physics step.</summary>
+        </member>
+        <member name="M:FZE.Physics.SetSpin(FZE.Entity,System.Numerics.Vector3)">
+            <summary>Sets the rigidbody turning, as a thrown thing does.</summary>
+        </member>
+        <member name="M:FZE.Physics.GetVelocity(FZE.Entity)">
+            <summary>The rigidbody's velocity - or the character controller's.</summary>
+        </member>
+        <member name="M:FZE.Physics.SetBodyType(FZE.Entity,System.String)">
+            <summary>dynamic, kinematic or static.</summary>
+        </member>
+        <member name="M:FZE.Physics.Jump(FZE.Entity,System.Single)">
+            <summary>Jumps if the character may (ground, coyote time, or an air jump left). 0 = the controller's own Jump Height.</summary>
+        </member>
+        <member name="M:FZE.Physics.Move(FZE.Entity,System.Numerics.Vector3)">
+            <summary>Walks the Character Controller this frame: a world direction whose length is the throttle (0..1).</summary>
+        </member>
+        <member name="M:FZE.Physics.SetCrouch(FZE.Entity,System.Boolean)">
+            <summary>Crouches; standing up waits until there is room above.</summary>
+        </member>
+        <member name="M:FZE.Physics.Launch(FZE.Entity,System.Numerics.Vector3,System.Boolean)">
+            <summary>A jump pad, a knockback: adds this velocity (or replaces the current one).</summary>
+        </member>
+        <member name="M:FZE.Physics.GetSpeed(FZE.Entity)">
+            <summary>Speed along the ground, m/s.</summary>
+        </member>
+        <member name="M:FZE.Physics.GroundHeight(System.Single,System.Single)">
+            <summary>The height of the ground under a point.</summary>
+        </member>
+        <member name="M:FZE.Physics.Raycast(System.Numerics.Vector3,System.Numerics.Vector3,System.Single,FZE.Entity)">
+            <summary>True when a ray hits something solid; Hit Entity, Point, Normal, Distance and Surface describe what.</summary>
+        </member>
+        <member name="M:FZE.Physics.SphereCast(System.Numerics.Vector3,System.Single,System.Numerics.Vector3,System.Single,FZE.Entity)">
+            <summary>A ball swept along a line - a thick ray that cannot slip through a gap narrower than it.</summary>
+        </member>
+        <member name="M:FZE.Physics.BoxCast(System.Numerics.Vector3,System.Numerics.Vector3,System.Numerics.Vector3,System.Single,FZE.Entity)">
+            <summary>A box swept along a line, unrotated.</summary>
+        </member>
+        <member name="M:FZE.Physics.HitEntity">
+            <summary>What the last cast hit (none for the terrain).</summary>
+        </member>
+        <member name="M:FZE.Physics.HitPoint">
+            <summary>Where the last cast hit.</summary>
+        </member>
+        <member name="M:FZE.Physics.HitNormal">
+            <summary>Which way the surface it hit faces.</summary>
+        </member>
+        <member name="M:FZE.Physics.HitDistance">
+            <summary>How far along the cast the hit was.</summary>
+        </member>
+        <member name="M:FZE.Physics.HitSurface">
+            <summary>What the hit surface is made of: Concrete, Metal, Wood, Dirt...</summary>
+        </member>
+        <member name="M:FZE.Physics.OverlapSphere(System.Numerics.Vector3,System.Single,System.Boolean)">
+            <summary>How many objects are inside a sphere now; Overlap Entity reads each.</summary>
+        </member>
+        <member name="M:FZE.Physics.OverlapBox(System.Numerics.Vector3,System.Numerics.Vector3,System.Boolean)">
+            <summary>How many objects are inside a box now; Overlap Entity reads each.</summary>
+        </member>
+        <member name="M:FZE.Physics.OverlapEntity(System.Int32)">
+            <summary>The Index-th object the last overlap found.</summary>
+        </member>
+        <member name="T:FZE.Ragdoll">
+            <summary>The engine's Ragdoll functions - the graph's Ragdoll nodes.</summary>
+        </member>
+        <member name="M:FZE.Ragdoll.GoLimp(FZE.Entity)">
+            <summary>The physics takes the body: it falls as a body falls.</summary>
+        </member>
+        <member name="M:FZE.Ragdoll.GetUp(FZE.Entity)">
+            <summary>Eases from where it lies back into the animation (its Get Up State, if set).</summary>
+        </member>
+        <member name="M:FZE.Ragdoll.Push(FZE.Entity,System.Numerics.Vector3,System.Numerics.Vector3)">
+            <summary>A blow: an impulse at a world point, on the part nearest it. Goes limp first.</summary>
+        </member>
+        <member name="T:FZE.Rendering">
+            <summary>The engine's Rendering functions - the graph's Rendering nodes.</summary>
+        </member>
+        <member name="M:FZE.Rendering.SetRenderScale(System.Single)">
+            <summary>The share of the window the scene is drawn at, 0.25 to 1, stretched smoothly to fit. 0 lets the controller choose it, to hold the frame rate.</summary>
+        </member>
+        <member name="M:FZE.Rendering.SetFeature(System.String,System.Boolean)">
+            <summary>Turn a technique on or off while the game runs (a graphics menu, a cutscene, one level). The ids are in Project Settings &gt; Rendering Features: fxaa, ssr, ao, bloom... Lasts until Play stops or Reset Feature.</summary>
+        </member>
+        <member name="M:FZE.Rendering.IsFeatureOn(System.String)">
+            <summary>Whether the technique is running now.</summary>
+        </member>
+        <member name="M:FZE.Rendering.ResetFeature(System.String)">
+            <summary>Back to what Project Settings says.</summary>
+        </member>
+        <member name="M:FZE.Rendering.ResetAllFeatures">
+            <summary>Every technique back to what Project Settings says.</summary>
+        </member>
+        <member name="M:FZE.Rendering.SetFeatureValue(System.String,System.Single)">
+            <summary>One of a technique's own settings: dither.levels, reflhold.frame...</summary>
+        </member>
+        <member name="M:FZE.Rendering.FeatureValue(System.String)">
+            <summary>What that setting is now.</summary>
+        </member>
+        <member name="T:FZE.Scene">
+            <summary>The engine's Scene functions - the graph's Scene nodes.</summary>
+        </member>
+        <member name="M:FZE.Scene.SetEnv(System.String,System.Single)">
+            <summary>What a clock changes in the air: sky, fog, inscatter, bloom, vignette, saturation.</summary>
+        </member>
+        <member name="M:FZE.Scene.SetEnvColor(System.String,System.Numerics.Vector3)">
+            <summary>fog, filter.</summary>
+        </member>
+        <member name="M:FZE.Scene.LoadScene(System.String)">
+            <summary>Switches scene at the end of the frame.</summary>
+        </member>
+        <member name="M:FZE.Scene.Time">
+            <summary>Seconds since the run began.</summary>
+        </member>
+        <member name="M:FZE.Scene.SetGameSpeed(System.Single)">
+            <summary>How fast the world runs, this run only: 0 stops it behind a menu that keeps animating, 0.3 is slow motion, 1 is normal. Scripts still update, with a Delta Time of 0 at speed 0.</summary>
+        </member>
+        <member name="M:FZE.Scene.CountAlive(System.String)">
+            <summary>How many objects with this tag are still standing (one with no health counts).</summary>
+        </member>
+        <member name="M:FZE.Scene.PlayEffect(System.String,System.Numerics.Vector3,System.Single)">
+            <summary>Plays an effect at a point: a .fzefx, an Effekseer .efk or a built-in name.</summary>
+        </member>
+        <member name="T:FZE.Screen">
+            <summary>The engine's Screen functions - the graph's Screen nodes.</summary>
+        </member>
+        <member name="M:FZE.Screen.Letterbox(System.Boolean,System.Single)">
+            <summary>Cinematic bars.</summary>
+        </member>
+        <member name="M:FZE.Screen.Splash(System.String,System.Single)">
+            <summary>A full-screen image.</summary>
+        </member>
+        <member name="M:FZE.Screen.PlayVideo(System.String,System.Single,System.Boolean)">
+            <summary>An image-sequence video, full screen.</summary>
+        </member>
+        <member name="M:FZE.Screen.ToScreen(System.Numerics.Vector3)">
+            <summary>Where a point lands on the canvas, from its centre; Z is 1 when on screen.</summary>
+        </member>
+        <member name="T:FZE.Sculpt">
+            <summary>The engine's Sculpt functions - the graph's Sculpt nodes.</summary>
+        </member>
+        <member name="M:FZE.Sculpt.Begin">
+            <summary>Starts a new sculpt.</summary>
+        </member>
+        <member name="M:FZE.Sculpt.Build(FZE.Entity,System.Single,System.Single)">
+            <summary>Makes the mesh of the shapes so far on this object; gives the triangle count.</summary>
+        </member>
+        <member name="T:FZE.Sprite">
+            <summary>The engine's Sprite functions - the graph's Sprite nodes.</summary>
+        </member>
+        <member name="M:FZE.Sprite.SpritePlay(FZE.Entity,System.Int32,System.Int32,System.Single,System.Boolean)">
+            <summary>Plays a run of frames. Asking for the clip already playing leaves it running.</summary>
+        </member>
+        <member name="M:FZE.Sprite.SpriteSheet(FZE.Entity,System.String)">
+            <summary>Changes the picture.</summary>
+        </member>
+        <member name="M:FZE.Sprite.SpriteFacing(FZE.Entity,System.Single)">
+            <summary>The way the character looks, degrees about up.</summary>
+        </member>
+        <member name="M:FZE.Sprite.SpriteFinished(FZE.Entity)">
+            <summary>True once a clip that does not loop has ended.</summary>
+        </member>
+        <member name="M:FZE.Sprite.SpriteFrame(FZE.Entity)">
+            <summary>The frame of the clip showing now.</summary>
+        </member>
+        <member name="T:FZE.Streaming">
+            <summary>The engine's Streaming functions - the graph's Streaming nodes.</summary>
+        </member>
+        <member name="M:FZE.Streaming.Load(System.String)">
+            <summary>Brings a scene INTO this one while the game runs - read, fetched and added in the background, shown all at once when it is all here. No loading screen.</summary>
+        </member>
+        <member name="M:FZE.Streaming.Preload(System.String)">
+            <summary>Loads it and keeps it ready without showing it; Load shows it at once.</summary>
+        </member>
+        <member name="M:FZE.Streaming.Unload(System.String)">
+            <summary>Takes it out again: hidden in one frame, its objects removed over the next few.</summary>
+        </member>
+        <member name="M:FZE.Streaming.IsActive(System.String)">
+            <summary>In the world and showing.</summary>
+        </member>
+        <member name="M:FZE.Streaming.IsLoaded(System.String)">
+            <summary>Ready (preloaded) or showing.</summary>
+        </member>
+        <member name="M:FZE.Streaming.Progress(System.String)">
+            <summary>0 to 1 on its way in.</summary>
+        </member>
+        <member name="M:FZE.Streaming.State(System.String)">
+            <summary>unloaded, loading, ready, active or unloading.</summary>
+        </member>
+        <member name="T:FZE.Text">
+            <summary>The engine's String functions - the graph's String nodes.</summary>
+        </member>
+        <member name="T:FZE.Terrain">
+            <summary>The engine's Terrain functions - the graph's Terrain nodes.</summary>
+        </member>
+        <member name="M:FZE.Terrain.Dig(FZE.Entity,System.Numerics.Vector3,System.Single,System.Single,System.Single)">
+            <summary>Takes Volume cubic metres of ground at Point, never below Floor Y, and the sides slide in. Gives what really left. The physics follows at once.</summary>
+        </member>
+        <member name="M:FZE.Terrain.DigSteep(FZE.Entity,System.Numerics.Vector3,System.Single,System.Single,System.Single,System.Single)">
+            <summary>Dig, leaving sides as steep as Max Slope: Slump then brings them down where it can be seen.</summary>
+        </member>
+        <member name="M:FZE.Terrain.Slump(FZE.Entity,System.Numerics.Vector3,System.Single,System.Single,System.Single,System.Single)">
+            <summary>One moment of a slope settling: ground steeper than Max Slope round Point moves down, at most Amount metres a sample. Nothing is lost. Gives where most of it is moving, or Y of -1000 when it has come to rest.</summary>
+        </member>
+        <member name="M:FZE.Terrain.SlumpHeading">
+            <summary>Which way the last Slump was going, flat.</summary>
+        </member>
+        <member name="M:FZE.Terrain.VolumeAbove(FZE.Entity,System.Numerics.Vector3,System.Single,System.Single)">
+            <summary>Cubic metres standing above Floor Y inside a circle.</summary>
+        </member>
+        <member name="M:FZE.Terrain.SaveHeights(FZE.Entity,System.String)">
+            <summary>Writes the ground's shape to a file, for a saved game.</summary>
+        </member>
+        <member name="M:FZE.Terrain.LoadHeights(FZE.Entity,System.String)">
+            <summary>Reads it back, for the GPU and the physics too.</summary>
+        </member>
+        <member name="M:FZE.Terrain.LoadHeightsNear(FZE.Entity,System.String,System.Numerics.Vector3,System.Single)">
+            <summary>Reads back only what the game changed: inside the circle, and never higher than the scene's ground. The rest of the world stays as the scene has it now.</summary>
+        </member>
+        <member name="T:FZE.UI">
+            <summary>The engine's UI functions - the graph's UI nodes.</summary>
+        </member>
+        <member name="M:FZE.UI.SetText(System.String,System.String,System.String)">
+            <summary>The text of an element on the canvas with this tag (empty tag: any canvas).</summary>
+        </member>
+        <member name="M:FZE.UI.Clicked(System.String,System.String)">
+            <summary>True on the frame a button was clicked.</summary>
+        </member>
+        <member name="M:FZE.UI.SetValue(System.String,System.String,System.Single)">
+            <summary>A bar's fill (0..1) or a slider's value.</summary>
+        </member>
+        <member name="M:FZE.UI.SetBlackboardNumber(System.String,System.Single)">
+            <summary>A number every graph, script and HUD binding can read.</summary>
+        </member>
+        <member name="M:FZE.UI.New(System.String,System.String,System.String,System.String,System.Numerics.Vector2,System.Numerics.Vector2)">
+            <summary>Makes an element (panel, text, bar, image, button, slider, toggle); the same name reuses it.</summary>
+        </member>
+        <member name="M:FZE.UI.Clear(System.String)">
+            <summary>Empties the canvas.</summary>
+        </member>
+        <member name="M:FZE.UI.Rect(System.String,System.String,System.String,System.Numerics.Vector2,System.Numerics.Vector2)">
+            <summary>Anchors: topleft, top, topright, left, center, right, bottomleft, bottom, bottomright.</summary>
+        </member>
+        <member name="M:FZE.UI.FillColor(System.String,System.String,System.Numerics.Vector4)">
+            <summary>A bar's filled part.</summary>
+        </member>
+        <member name="M:FZE.UI.Outline(System.String,System.String,System.Numerics.Vector4)">
+            <summary>The rim that keeps text readable.</summary>
+        </member>
+        <member name="M:FZE.UI.Tint(System.String,System.String,System.Numerics.Vector4)">
+            <summary>Multiplies an image's colour.</summary>
+        </member>
+        <member name="M:FZE.UI.TextRtl(System.String,System.String,System.Boolean)">
+            <summary>Reads this text right to left whatever its first letter is: a number in an Arabic screen stays where Arabic text would.</summary>
+        </member>
+        <member name="M:FZE.UI.Sliced(System.String,System.String,System.Single,System.Single)">
+            <summary>Its picture stretches by the middle: corners of Slice pixels stay as drawn, for frames and plates.</summary>
+        </member>
+        <member name="M:FZE.UI.Image(System.String,System.String,System.String)">
+            <summary>Puts a picture on an image element.</summary>
+        </member>
+        <member name="M:FZE.UI.Typeface(System.String,System.String,System.String)">
+            <summary>Empty goes back to the engine face.</summary>
+        </member>
+        <member name="M:FZE.UI.Font(System.String,System.String,System.Single,System.Int32,System.Int32)">
+            <summary>Style 0 regular, 1 semibold, 2 bold, 3 mono; align 0 left, 1 centre, 2 right; -1 keeps.</summary>
+        </member>
+        <member name="M:FZE.UI.Parent(System.String,System.String,System.String)">
+            <summary>Puts an element inside another: it moves, scales and hides with it.</summary>
+        </member>
+        <member name="M:FZE.UI.Scale(System.String,System.String,System.Single)">
+            <summary>Visual scale, children included, from the element's anchor. Hits follow it.</summary>
+        </member>
+        <member name="M:FZE.UI.Mask(System.String,System.String,System.Boolean)">
+            <summary>Cuts its children to its own rectangle.</summary>
+        </member>
+        <member name="M:FZE.UI.Navigable(System.String,System.String,System.Boolean)">
+            <summary>False: the UI's own arrows and Enter leave this element alone, for a game that moves its own selection.</summary>
+        </member>
+        <member name="M:FZE.UI.ScreenRect(System.String,System.String)">
+            <summary>Where an element is, in the picture's pixels: x, y, width, height.</summary>
+        </member>
+        <member name="M:FZE.UI.Changed(System.String,System.String)">
+            <summary>True on the frame a slider or toggle changed.</summary>
+        </member>
+        <member name="M:FZE.UI.OnClick(System.String,System.String,System.String)">
+            <summary>The custom event raised on the canvas object's graph when this is clicked (with the element's name).</summary>
+        </member>
+        <member name="M:FZE.UI.OnChange(System.String,System.String,System.String)">
+            <summary>The custom event raised when this changes (with the element's name and value).</summary>
+        </member>
+        <member name="M:FZE.UI.PlayAnimation(System.String,System.String,System.Boolean)">
+            <summary>Plays a clip of the canvas's screen (made in the UI Animation window); false when it has none by that name.</summary>
+        </member>
+        <member name="M:FZE.UI.StopAnimation(System.String,System.String)">
+            <summary>Stops it where it is.</summary>
+        </member>
+        <member name="M:FZE.UI.RunAction(System.String,System.String)">
+            <summary>What a button runs: open:Settings, show:/hide:&lt;canvas&gt;, play:&lt;clip&gt;, set:key=value, scene:&lt;name&gt;, event:&lt;name&gt;...</summary>
+        </member>
+        <member name="M:FZE.UI.Localize(System.String)">
+            <summary>The key's text in the language now (the project's string tables).</summary>
+        </member>
+        <member name="M:FZE.UI.GetLanguage">
+            <summary>The language's code (en, ar).</summary>
+        </member>
+        <member name="M:FZE.UI.SetLanguage(System.String)">
+            <summary>By code or name; every text bound to loc: follows. False when the tables have no such language.</summary>
+        </member>
+        <member name="T:FZE.Vehicle">
+            <summary>The engine's Vehicle functions - the graph's Vehicle nodes.</summary>
+        </member>
+        <member name="M:FZE.Vehicle.Drive(FZE.Entity,System.Single,System.Single,System.Single,System.Single)">
+            <summary>What the driver asks, held until changed: throttle -1 (reverse) to 1, steer -1 (left) to 1 (right), brake and hand brake 0 to 1.</summary>
+        </member>
+        <member name="M:FZE.Vehicle.Speed(FZE.Entity)">
+            <summary>km/h along its forward; negative in reverse.</summary>
+        </member>
+        <member name="M:FZE.Vehicle.WheelsOnGround(FZE.Entity)">
+            <summary>0 to 4: how many wheels touch the ground.</summary>
+        </member>
+        <member name="T:FZE.Voice">
+            <summary>The engine's Voice functions - the graph's Voice nodes.</summary>
+        </member>
+        <member name="M:FZE.Voice.Start">
+            <summary>Opens capture; nothing is sent until Talk.</summary>
+        </member>
+        <member name="M:FZE.Voice.Talk(System.Boolean)">
+            <summary>Push to talk.</summary>
+        </member>
+        <member name="M:FZE.Voice.Level(System.Int32)">
+            <summary>How loud that player arrives, 0..1.</summary>
+        </member>
+        <member name="M:FZE.Voice.At(System.Int32,System.Numerics.Vector3)">
+            <summary>Where that player's voice comes from.</summary>
+        </member>
+        <member name="M:FZE.Voice.Allow(System.Boolean)">
+            <summary>Records the player's answer; remembered.</summary>
+        </member>
+        <member name="M:FZE.Voice.Consent">
+            <summary>granted, denied or unasked.</summary>
+        </member>
+        <member name="M:FZE.Voice.MicLevel">
+            <summary>0..1; moves when you talk.</summary>
+        </member>
+        <member name="T:FZE.NativeValue">
+            <summary>
+            One value crossing between C# and the engine. The same layout as
+            FZE::CS::NativeValue in Engine/Script/CSharp/CSharpBridge.h - a graph's
+            pin value, flattened: numbers in X..W, an entity (or a list's items) in
+            Ref, a string in Text.
+            </summary>
+        </member>
+        <member name="T:FZE.PinType">
+            <summary>The graph's pin types (Engine/Script/VisualScript.h, namespace T).</summary>
+        </member>
+        <member name="T:FZE.Native">
+            <summary>The engine's side of the wire, handed over once at start-up.</summary>
+        </member>
+        <member name="M:FZE.Native.Resolve(System.Int32@,System.String,System.String)">
+            <summary>
+            Finds an engine function by its class and name the first time it is
+            called; the number is kept in the caller's field after that.
+            </summary>
+        </member>
+        <member name="M:FZE.Native.List``1(FZE.NativeValue,System.Func{FZE.NativeValue,``0})">
+            <summary>A list the engine returned: Count values at Ref, valid until the next call.</summary>
+        </member>
+        <member name="T:FZE.NodeAttribute">
+             <summary>
+             Makes a C# method a node in the visual scripting palette. C# and the
+             graphs are one system: a graph places the method like any engine node
+             and calls it; the C# reaches back into the graph through
+             <see cref="M:FZE.Entity.RaiseEvent(System.String,System.Object[])"/>, <see cref="M:FZE.Entity.GetVariable``1(System.String)"/> and
+             <see cref="M:FZE.Entity.SetVariable(System.String,System.Object)"/>.
+            
+                 public class Turret : Script
+                 {
+                     // An action: execution in and out, and a Target - the object
+                     // whose Turret runs it (unwired: the graph's own object).
+                     [Node] public void Aim(Entity at) { ... }
+            
+                     // A value: no execution pins, computed when something reads it.
+                     [Node(Pure = true)] public static float Lead(float speed, float distance) => distance / speed;
+                 }
+            
+             Parameters and the result may be bool, int, float, double, string,
+             Vector2, Vector3, Vector4 or Entity. A parameter's C# default is the
+             value its pin starts with.
+             </summary>
+        </member>
+        <member name="P:FZE.NodeAttribute.Title">
+            <summary>The node's title; the method's name, spaced out, when not set.</summary>
+        </member>
+        <member name="P:FZE.NodeAttribute.Category">
+            <summary>Where the palette files it; "C# · ClassName" when not set.</summary>
+        </member>
+        <member name="P:FZE.NodeAttribute.Pure">
+            <summary>
+            No execution pins: the node is a value, computed when read. A promise
+            that the method changes nothing.
+            </summary>
+        </member>
+        <member name="T:FZE.Wire">
+            <summary>C# values on a graph's wires, and back.</summary>
+        </member>
+        <member name="M:FZE.Wire.PinOf(System.Type)">
+            <summary>The pin a C# type travels on; 0 when no pin carries it.</summary>
+        </member>
+        <member name="M:FZE.Wire.To(System.Object,System.Collections.Generic.List{System.IntPtr})">
+            <summary>
+            A C# value as a wire's value. A string is copied to native memory and
+            its pointer added to <paramref name="strings"/>, for the caller to
+            free once the call is over.
+            </summary>
+        </member>
+        <member name="M:FZE.Wire.From(FZE.NativeValue,System.Type)">
+            <summary>A wire's value as the C# type asked for.</summary>
+        </member>
+        <member name="T:FZE.Script">
+             <summary>
+             The base of every C# gameplay script. Put a C# Script component on an
+             object, name the class, press Play:
+            
+                 public class Spinner : Script
+                 {
+                     public float DegreesPerSecond = 90;
+                     public override void OnUpdate(float dt)
+                         => Rotation += new Vector3(0, DegreesPerSecond * dt, 0);
+                 }
+            
+             OnStart runs once when Play begins (or when the object is made while the
+             game runs), OnUpdate every frame with the frame's seconds, OnStop when
+             Play ends or the object is destroyed. What a script can do to its
+             object and the world is the engine's own API - the same functions the
+             visual scripting's nodes call, generated, so the two can never differ.
+             </summary>
+        </member>
+        <member name="P:FZE.Script.Entity">
+            <summary>The object this script is on.</summary>
+        </member>
+        <member name="M:FZE.Script.OnTriggerEnter(FZE.Entity)">
+            <summary>
+            Something overlaps this object, where one of the two is a trigger
+            (Collider > Is Trigger) and one of them can move - a character, or a
+            dynamic or kinematic Rigidbody. The graph's On Trigger Enter.
+            </summary>
+        </member>
+        <member name="M:FZE.Script.OnTriggerExit(FZE.Entity)">
+            <summary>Something that overlapped this trigger has left it.</summary>
+        </member>
+        <member name="M:FZE.Script.OnCollision(FZE.Entity)">
+            <summary>This object's physics body started touching another solid one.</summary>
+        </member>
+        <member name="M:FZE.Script.OnCollisionExit(FZE.Entity)">
+            <summary>This object's physics body stopped touching another.</summary>
+        </member>
+        <member name="M:FZE.Script.OnCollisionStay(FZE.Entity)">
+            <summary>Every frame this object's body keeps touching another.</summary>
+        </member>
+        <member name="M:FZE.Script.OnTriggerStay(FZE.Entity)">
+            <summary>Every frame something stays inside this trigger (or this object inside one).</summary>
+        </member>
+        <member name="M:FZE.Script.OnSleep">
+            <summary>This object's body came to rest; the physics stops simulating it until something touches it.</summary>
+        </member>
+        <member name="M:FZE.Script.OnWake">
+            <summary>This object's body was resting and something moved it.</summary>
+        </member>
+        <member name="M:FZE.Script.OnJointBreak(FZE.Entity)">
+            <summary>A Joint holding this object broke. Other is what it was joined to (none for the world).</summary>
+        </member>
+        <member name="M:FZE.Script.OnDamaged(System.Single,FZE.Entity)">
+            <summary>
+            This object was hurt - a bullet, a bite, a Damage call. Keep the
+            player's health in a field and take amount from it here. The
+            graph's On Damaged.
+            </summary>
+        </member>
+        <member name="P:FZE.Script.Rotation">
+            <summary>Euler angles, in degrees.</summary>
+        </member>
+        <member name="M:FZE.Script.Create(System.String,System.String,System.Numerics.Vector3)">
+            <summary>A new object: Shapes.Cube, Shapes.Sphere..., a model's path, or Shapes.Empty.</summary>
+        </member>
+        <member name="M:FZE.Script.Instantiate(System.String,System.Numerics.Vector3)">
+            <summary>A copy of a .fzeprefab.</summary>
+        </member>
+        <member name="M:FZE.Script.Instantiate(FZE.Entity,System.Numerics.Vector3)">
+            <summary>A copy of an object in the scene, with its children.</summary>
+        </member>
+        <member name="T:FZE.Debug">
+            <summary>Messages to the editor's console.</summary>
+        </member>
+        <member name="T:FZE.ScriptHost">
+            <summary>
+            Every entry point the engine calls (Engine/Script/CSharp/DotNetHost.cpp).
+            Each is [UnmanagedCallersOnly] and each catches everything: an exception
+            may never cross into native code - it would take the editor with it -
+            so a script that throws is reported on the console with its stack and
+            the game goes on.
+            </summary>
+        </member>
+        <member name="M:FZE.ScriptHost.LoadGame(System.Byte*)">
+            <summary>Loads a game's scripts; returns how many Script classes it has, or -1.</summary>
+        </member>
+        <member name="M:FZE.ScriptHost.Create(System.Byte*,System.UInt64)">
+            <summary>An instance of the class on the entity; its handle, or 0.</summary>
+        </member>
+        <member name="M:FZE.ScriptHost.SetField(System.Int64,System.Byte*,System.Byte*)">
+            <summary>
+            Sets a public field or property from the component's saved text -
+            what the Inspector shows for a script. False when there is no such
+            member or the text is not its type.
+            </summary>
+        </member>
+        <member name="M:FZE.ScriptHost.Classes(System.Byte*,System.Int32)">
+            <summary>
+            The Script classes the game has, one full name a line. Writes nothing
+            and returns the size needed when the buffer is too small.
+            </summary>
+        </member>
+        <member name="M:FZE.ScriptHost.Fields(System.Byte*,System.Byte*,System.Int32)">
+            <summary>
+            A class's editable members, one "name|type|default" a line: the public
+            fields and settable properties of the types the Inspector can show,
+            with the value a new instance starts with.
+            </summary>
+        </member>
+        <member name="M:FZE.ScriptHost.LaunchDebugger">
+            <summary>
+            Asks for a debugger, on a thread of its own so the editor keeps drawing
+            while the choice is made. 1 when one is attached already.
+            </summary>
+        </member>
+        <member name="M:FZE.ScriptHost.ApiSymbols(System.Byte*,System.Int32)">
+            <summary>
+            The completion list as JSON: [{n name, o owner, k kind (t type,
+            m method, p property or field), d the signature, doc the summary}].
+            </summary>
+        </member>
+        <member name="M:FZE.ScriptHost.Nodes(System.Byte*,System.Int32)">
+            <summary>
+            The game's [Node] methods, as JSON: [{id, class, fullClass, name,
+            title, category, tooltip, static, pure, returns, params:[{name, type,
+            default?}]}]. Types are the graph's pin types. Writes nothing and
+            returns the size needed when the buffer is too small.
+            </summary>
+        </member>
+        <member name="M:FZE.ScriptHost.InvokeNode(System.Int32,System.Int64,FZE.NativeValue*,System.Int32,FZE.NativeValue*)">
+            <summary>
+            Runs node <paramref name="id"/>: on the Script instance
+            <paramref name="handle"/> for an instance method, on nothing for a
+            static one. 0 on success; 1 no such node, 2 no instance, 3 the method
+            threw (reported), 4 the wrong number of arguments, 5 the instance is
+            not of the method's class.
+            </summary>
+        </member>
+    </members>
+</doc>

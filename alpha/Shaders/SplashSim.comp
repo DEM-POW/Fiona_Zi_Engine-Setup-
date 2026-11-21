@@ -1,0 +1,190 @@
+#version 460 core
+// ============================================================================
+//  SPLASHES: made where things landed, from what they landed on
+//
+//  u_Mode 0 - SPAWN, one invocation per splash event the fall wrote this
+//  frame (PrecipSim.comp). What a landing throws up depends on the surface the
+//  weather map has there and on the water lying on it - the profile a real
+//  impact has (Worthington's crown and jet; Yarin 2006 on drop impacts):
+//
+//    * into standing water or a pond: a crown and a jet straight up, a few
+//      droplets falling back (the ring is the water's shader's);
+//    * on hard ground - stone, asphalt, concrete, metal, glass, wood: a low
+//      crown and droplets thrown out round it, more and brighter on metal
+//      and glass, fewer while the surface is still dry;
+//    * on soft ground - soil, grass, fabric: one or two droplets, short;
+//      sand and snow swallow the drop;
+//    * hail and sleet: chips of ice that skitter, no crown;
+//    * in heavy rain a little mist off hard ground.
+//
+//  u_Mode 1 - STEP every splash particle: droplets and chips fly ballistic and
+//  die on the ground they rose from; crowns stand and fade; mist drifts.
+//  u_Mode 2 - SPRAY handed in from the CPU (a wheel, a body landing in water).
+//
+//  A ring buffer: new splashes take the next slots, the oldest are overwritten.
+// ============================================================================
+
+layout(local_size_x = 64) in;
+
+struct SplashEvent { vec4 PosType; vec4 Info; };
+layout(std430, binding = 10) buffer Events { uint eventCount; uint ePad0, ePad1, ePad2; SplashEvent events[]; };
+struct Splash { vec4 PosAge; vec4 VelLife; vec4 Info; vec4 Light; };   // Info: kind, size mm, seed, ground y
+layout(std430, binding = 11) buffer Splashes { uint head; uint sPad0, sPad1, sPad2; Splash splashes[]; };
+struct Spray { vec4 PosCount; vec4 VelSpread; vec4 Size; };
+layout(std430, binding = 12) readonly buffer Sprays { Spray sprays[]; };
+
+#include "lib/Wind.glsl"
+#include "lib/WeatherMap.glsl"
+#include "lib/PrecipLight.glsl"
+
+uniform int   u_Mode;
+uniform int   u_Capacity;
+uniform int   u_EventMax;
+uniform int   u_SprayCount;
+uniform float u_Dt;
+uniform uint  u_Frame;
+uniform float u_Rain;           // mm/h - how much mist
+
+const int kCrown = 1, kDroplet = 2, kMist = 3, kChip = 4, kJet = 5;
+
+uint Hash(uint x) {
+    x ^= x >> 16u; x *= 0x7feb352du;
+    x ^= x >> 15u; x *= 0x846ca68bu;
+    x ^= x >> 16u;
+    return x;
+}
+float Rand(inout uint s) { s = Hash(s + 0x9e3779b9u); return float(s & 0xffffffu) / 16777216.0; }
+
+uint Take(int n) { return atomicAdd(head, uint(n)); }
+
+void Put(uint slot, vec3 p, vec3 v, float life, int kind, float size, float seed, float ground) {
+    uint k = slot % uint(u_Capacity);
+    splashes[k] = Splash(vec4(p, 0.0), vec4(v, life), vec4(float(kind), size, seed, ground), vec4(0.0));
+}
+
+void Spawn(uint e) {
+    SplashEvent ev = events[e];
+    vec3 p = ev.PosType.xyz;
+    int surf = int(ev.PosType.w + 0.5);
+    float dmm = ev.Info.x;
+    int hits = int(ev.Info.y + 0.5);
+    uint s = Hash(e * 7919u + u_Frame * 104729u);
+    vec4 water = vec4(0.0);
+    vec2 uv = FZE_WeatherUV(p.xz);
+    if (u_HasWeatherMap == 1 && FZE_WeatherInside(uv)) water = FZE_WeatherWater(uv);
+    bool pond = surf == 12 || water.b > 1.5;
+    bool onSnow = water.a > 1.0 || surf == 11;
+    bool hard = surf == 0 || surf == 1 || surf == 2 || surf == 3 || surf == 7 || surf == 8 || surf == 9;
+    bool bright = surf == 8 || surf == 9;
+    float wet = max(water.g, water.r);
+
+    if (hits == 3) {
+        // Ice: chips that skitter off whatever it is (a plop into water).
+        int n = pond ? 2 : 3 + int(Rand(s) * 3.0);
+        uint base = Take(n);
+        for (int k = 0; k < n; ++k) {
+            float a = Rand(s) * 6.2831853;
+            float sp = mix(0.6, 2.2, Rand(s));
+            vec3 v = vec3(cos(a) * sp, mix(0.6, 1.8, Rand(s)), sin(a) * sp);
+            Put(base + uint(k), p + vec3(0.0, 0.005, 0.0), v, mix(0.25, 0.5, Rand(s)), pond ? kDroplet : kChip,
+                pond ? 0.8 : max(dmm * 0.25, 0.8), Rand(s), p.y);
+        }
+        return;
+    }
+    if (hits != 1 || onSnow) return;             // snow, dust: nothing to throw
+    if (surf == 5 && !pond) return;              // sand drinks it
+
+    if (pond) {
+        // Crown, then a jet up the middle, then a few drops falling back.
+        uint base = Take(4);
+        Put(base, p, vec3(0.0), mix(0.10, 0.16, Rand(s)), kCrown, dmm * 1.3, Rand(s), p.y);
+        Put(base + 1u, p, vec3(0.0, mix(0.9, 1.6, Rand(s)) * sqrt(dmm / 2.0), 0.0), 0.35, kJet, max(dmm * 0.6, 0.6), Rand(s), p.y);
+        for (int k = 0; k < 2; ++k) {
+            float a = Rand(s) * 6.2831853;
+            float sp = mix(0.15, 0.5, Rand(s));
+            Put(base + 2u + uint(k), p, vec3(cos(a) * sp, mix(0.7, 1.4, Rand(s)), sin(a) * sp), 0.4, kDroplet,
+                mix(0.4, 0.9, Rand(s)), Rand(s), p.y);
+        }
+        return;
+    }
+    if (hard) {
+        // More droplets the bigger the drop and the wetter the face: a dry
+        // face takes the first drops in; a wet one throws a full crown.
+        int n = int(mix(2.0, 6.0, clamp(dmm / 3.5, 0.0, 1.0)) * mix(0.5, 1.0, wet) + (bright ? 2.0 : 0.0) + Rand(s));
+        n = clamp(n, 1, 9);
+        bool mist = u_Rain > 12.0 && Rand(s) < clamp((u_Rain - 12.0) / 60.0, 0.0, 0.35);
+        uint base = Take(n + 1 + (mist ? 1 : 0));
+        Put(base, p, vec3(0.0), mix(0.07, 0.12, Rand(s)), kCrown, dmm * mix(0.6, 1.0, wet), Rand(s), p.y);
+        for (int k = 0; k < n; ++k) {
+            float a = Rand(s) * 6.2831853;
+            float sp = mix(0.5, 1.8, Rand(s)) * sqrt(dmm / 2.0);
+            vec3 v = vec3(cos(a) * sp, mix(0.7, 2.2, Rand(s)) * sqrt(dmm / 2.0), sin(a) * sp);
+            Put(base + 1u + uint(k), p + vec3(0.0, 0.002, 0.0), v, mix(0.25, 0.45, Rand(s)), kDroplet,
+                mix(0.25, 0.8, Rand(s)), Rand(s), p.y);
+        }
+        if (mist) {
+            vec3 v = vec3(0.0, 0.12, 0.0) + FZE_WindAt(p) * 0.3;
+            Put(base + 1u + uint(n), p + vec3(0.0, 0.05, 0.0), v, mix(0.8, 1.5, Rand(s)), kMist, mix(150.0, 380.0, Rand(s)), Rand(s), p.y);
+        }
+        return;
+    }
+    // Soft ground: soil, grass, cloth.
+    int n = 1 + int(Rand(s) * 1.6);
+    uint base = Take(n);
+    for (int k = 0; k < n; ++k) {
+        float a = Rand(s) * 6.2831853;
+        float sp = mix(0.2, 0.8, Rand(s));
+        Put(base + uint(k), p + vec3(0.0, surf == 6 ? 0.04 : 0.002, 0.0),
+            vec3(cos(a) * sp, mix(0.4, 1.1, Rand(s)), sin(a) * sp), mix(0.15, 0.3, Rand(s)), kDroplet,
+            mix(0.2, 0.6, Rand(s)), Rand(s), p.y);
+    }
+}
+
+void SpawnSpray(uint i) {
+    Spray sp = sprays[i];
+    int n = int(sp.PosCount.w);
+    uint s = Hash(i * 3571u + u_Frame * 2909u + 5u);
+    uint base = Take(n);
+    for (int k = 0; k < n; ++k) {
+        vec3 r = vec3(Rand(s), Rand(s), Rand(s)) * 2.0 - 1.0;
+        vec3 v = sp.VelSpread.xyz + r * sp.VelSpread.w;
+        float size = sp.Size.x * mix(0.5, 1.5, Rand(s));
+        bool mist = size > 50.0;
+        Put(base + uint(k), sp.PosCount.xyz + r * 0.05, v, mix(0.4, 0.9, Rand(s)) * (mist ? 2.0 : 1.0),
+            mist ? kMist : kDroplet, size, Rand(s), sp.PosCount.y - 0.3);
+    }
+}
+
+void Step(uint i) {
+    Splash sp = splashes[i];
+    if (sp.PosAge.w >= sp.VelLife.w) return;
+    int kind = int(sp.Info.x + 0.5);
+    sp.PosAge.w += u_Dt;
+    vec3 p = sp.PosAge.xyz, v = sp.VelLife.xyz;
+    if (kind == kDroplet || kind == kChip || kind == kJet) {
+        v.y -= 9.81 * u_Dt;
+        // Air drag on a drop under a millimetre: it slows within a few tenths.
+        v *= exp(-u_Dt * 1.2);
+        p += v * u_Dt;
+        if (p.y < sp.Info.w - 0.002 && v.y < 0.0) sp.PosAge.w = sp.VelLife.w;
+    } else if (kind == kMist) {
+        v += (FZE_WindAt(p) * 0.6 + vec3(0.0, 0.08, 0.0) - v) * (1.0 - exp(-u_Dt / 0.6));
+        p += v * u_Dt;
+    }
+    sp.PosAge.xyz = p;
+    sp.VelLife.xyz = v;
+    sp.Light.rgb = FZE_PrecipLight(p, kind == kMist ? 0.55 : 0.7, 1.0);
+    splashes[i] = sp;
+}
+
+void main() {
+    uint i = gl_GlobalInvocationID.x;
+    if (u_Mode == 0) {
+        uint n = min(eventCount, uint(u_EventMax));
+        if (i < n) Spawn(i);
+    } else if (u_Mode == 1) {
+        if (i < uint(u_Capacity)) Step(i);
+    } else {
+        if (i < uint(u_SprayCount)) SpawnSpray(i);
+    }
+}

@@ -1,0 +1,41 @@
+#version 460 core
+// ============================================================================
+//  FILLING THE PROBES THAT ARE INSIDE SOMETHING
+//
+//  A probe whose cell is solid was marked L0 = -1 (SkyVisibility.comp). Here it
+//  takes the average of its open neighbours, and KEEPS THE MARK: its L0 is
+//  stored negated (-L0 - 0.001). The shading weights such a probe almost to
+//  nothing beside real ones (lib/Lighting.glsl, FZE_SkyVisSH) - its neighbours
+//  are on BOTH sides of the wall it sits in, so its average is the outside's
+//  light leaking into the room - and uses it only when nothing better is near.
+//  Valid probes are copied through unchanged.
+// ============================================================================
+
+layout(local_size_x = 4, local_size_y = 4, local_size_z = 4) in;
+
+layout(rgba16f, binding = 0) writeonly uniform image3D u_Out;
+uniform sampler3D u_In;
+uniform vec3 u_ProbeDimF;          // probes, as floats
+
+void main() {
+    ivec3 dim = ivec3(u_ProbeDimF);
+    ivec3 id = ivec3(gl_GlobalInvocationID);
+    if (any(greaterThanEqual(id, dim))) return;
+    vec4 self = texelFetch(u_In, id, 0);
+    if (self.x >= 0.0) { imageStore(u_Out, id, self); return; }
+
+    vec4 sum = vec4(0.0);
+    float n = 0.0;
+    for (int z = -1; z <= 1; ++z)
+    for (int y = -1; y <= 1; ++y)
+    for (int x = -1; x <= 1; ++x) {
+        ivec3 q = id + ivec3(x, y, z);
+        if (any(lessThan(q, ivec3(0))) || any(greaterThanEqual(q, dim))) continue;
+        vec4 v = texelFetch(u_In, q, 0);
+        if (v.x < 0.0) continue;
+        sum += v;
+        n += 1.0;
+    }
+    vec4 v = n > 0.0 ? sum / n : vec4(0.0);
+    imageStore(u_Out, id, vec4(-v.x - 0.001, v.yzw));
+}

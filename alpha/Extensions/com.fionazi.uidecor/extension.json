@@ -1,0 +1,23 @@
+{
+    "id": "com.fionazi.uidecor",
+    "name": "UI Decor",
+    "displayName": "UI Decor",
+    "version": "1.0.0",
+    "engineVersion": ">=0.1.0",
+    "apiVersion": 1,
+    "author": "Fiona Zi",
+    "description": "Dresses the editor's own windows, menus and popups: colour themes, frames on or off, rounded corners, and animated decorations - a neon frame, corner ornaments, sparkles, falling petals, a flame badge - like the frames people put on a profile picture.",
+    "category": "Editor",
+    "type": "Editor",
+    "loadPhase": "ProjectOpen",
+    "runtime": false,
+    "editor": true,
+    "entryPoints": {
+        "editor": "Bin/UIDecorEditor.dll"
+    },
+    "capabilities": ["editor"],
+    "permissions": [],
+    "platforms": ["Windows"],
+    "dependencies": [],
+    "critical": false
+}

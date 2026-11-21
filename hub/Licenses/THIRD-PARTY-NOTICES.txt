@@ -1,0 +1,328 @@
+====================================================================
+              THIRD-PARTY NOTICES - FIONA ZI ENGINE
+====================================================================
+
+The Fiona Zi Engine is the work of its Author (see LICENSE.txt). It
+is built on the open-source components listed here, each of which
+belongs to its own authors and is used under its own licence. This
+file records every one of them, its licence, and where the full
+licence text sits in the tree.
+
+Why this file matters: every licence below requires its copyright
+notice to travel with any distribution. If you ship a game or tool
+built on this engine, ship this file (or the notices it contains)
+beside the executable, unchanged. The engine's own licence makes
+that a condition of use (LICENSE.txt, Section 4.3).
+
+None of these components is under the GPL, the LGPL or any other
+copyleft licence. Nothing here obliges you to publish the source of
+a product built on the engine.
+
+Last full review of this list: 17 October 2026 - every vendor
+folder checked against what the engine compiles, links or loads.
+Removed then as unused: Steam Audio (its 51 MB phonon.dll was
+still shipped though nothing loaded it), ImGuizmo (replaced by the
+engine's own gizmo), Rocky's three headers; RmlUi had gone with
+UI phase 10.
+
+
+====================================================================
+SUMMARY
+====================================================================
+
+  Component        Licence                          Notice required
+  ---------------  -------------------------------  ---------------
+  Assimp           BSD 3-Clause                     yes
+  Dear ImGui       MIT                              yes
+  Effekseer        MIT                              yes
+  ENet             MIT                              yes
+  FreeType         FreeType License (BSD-style)     yes, with credit
+  glad             WTFPL/CC0 (generated) +          yes (Apache part)
+                   Apache-2.0 (Khronos parts)
+  GLFW             zlib/libpng                      yes
+  GLM              MIT (or Happy Bunny)             yes
+  Google Filament  Apache-2.0 (shader maths only)   yes
+  Jolt Physics     MIT                              yes
+  .NET host (2 hdrs) MIT                            yes
+  meshoptimizer    MIT                              yes
+  miniaudio        MIT-0 or Unlicense (choice)      no
+  nlohmann/json    MIT                              yes
+  ozz-animation    MIT                              yes
+  spdlog (+ fmt)   MIT                              yes
+  stb_image(_write) MIT or public domain (choice)   no
+  Tabler Icons     MIT                              yes
+  tinygltf         MIT                              yes
+  ufbx             MIT or Unlicense (choice)        no
+  Roboto (font)    Apache-2.0                       yes
+  Cinzel, EB Garamond, Indie Flower (fonts)
+                   SIL Open Font License 1.1        yes (OFL text)
+
+
+====================================================================
+DETAILS
+====================================================================
+
+--------------------------------------------------------------------
+Open Asset Import Library (Assimp)  -  wide-format model import
+https://github.com/assimp/assimp
+Copyright (c) 2006-2026, assimp team. All rights reserved.
+Licensed under the 3-clause BSD licence: vendor/assimp/LICENSE
+
+Vendored as a static library and used as the engine's wide-format
+model import front end (OBJ, Collada, 3DS, PLY, STL, X, MD5, LWO,
+BLEND and others). Exporters are compiled out (ASSIMP_NO_EXPORT).
+glTF and FBX are NOT routed through Assimp; they keep the tinygltf
+and ufbx backends below. Assimp's contrib/ directory bundles the
+parsers it depends on (zlib, pugixml, rapidjson, utf8cpp, poly2tri,
+clipper, openddlparser, unzip, stb) under their own permissive
+licences; each carries its notice inside vendor/assimp/contrib/.
+--------------------------------------------------------------------
+
+--------------------------------------------------------------------
+Dear ImGui  -  the editor's interface
+https://github.com/ocornut/imgui
+Copyright (c) 2014-2026 Omar Cornut
+Licensed under the MIT licence: vendor/imgui/LICENSE.txt
+--------------------------------------------------------------------
+
+--------------------------------------------------------------------
+Effekseer  -  visual-effects runtime (imported .efk effects)
+https://effekseer.github.io
+Copyright (c) 2011 Effekseer Project
+Licensed under the MIT licence: vendor/effekseer/LICENSE
+
+The runtime only (core, OpenGL backend, material compiler). The
+authoring tools are not included. The engine's own effect format
+(.fzefx) does not depend on it.
+--------------------------------------------------------------------
+
+--------------------------------------------------------------------
+ENet  -  reliable UDP networking
+http://enet.bespin.org
+Copyright (c) 2002-2024 Lee Salzman
+Licensed under the MIT licence: vendor/enet/LICENSE
+--------------------------------------------------------------------
+
+--------------------------------------------------------------------
+FreeType  -  glyph rasterisation for the game UI
+https://freetype.org
+Copyright (c) 1996-2024 by David Turner, Robert Wilhelm, and
+Werner Lemberg.
+Licensed under the FreeType License (FTL), a BSD-style licence with
+a credit clause: vendor/freetype/LICENSE.TXT. Pinned at VER-2-13-3.
+
+The FTL asks that the following appear in the documentation or
+credits of any product that ships it:
+  "Portions of this software are copyright (c) The FreeType Project
+   (www.freetype.org). All rights reserved."
+Everything optional is disabled: no zlib, bzip2, PNG, Brotli or
+HarfBuzz.
+--------------------------------------------------------------------
+
+--------------------------------------------------------------------
+glad  -  OpenGL 4.6 function loader (generated code)
+https://gen.glad.sh
+SPDX: (WTFPL OR CC0-1.0) AND Apache-2.0
+
+The glad-specific code is public domain (WTFPL or CC0, your choice);
+the parts derived from the Khronos OpenGL specification are under the
+Apache License 2.0, and that licence's notice requirement applies to
+them. Source: vendor/glad/src/gl.c, vendor/glad/include/.
+--------------------------------------------------------------------
+
+--------------------------------------------------------------------
+GLFW  -  windows, contexts and input
+https://www.glfw.org
+Copyright (c) 2002-2006 Marcus Geelnard
+Copyright (c) 2006-2019 Camilla Löwy
+Licensed under the zlib/libpng licence: vendor/glfw/LICENSE.md
+--------------------------------------------------------------------
+
+--------------------------------------------------------------------
+GLM (OpenGL Mathematics)  -  vector and matrix maths
+https://github.com/g-truc/glm
+Copyright (c) 2005 - G-Truc Creation
+Dual-licensed under The Happy Bunny License or the MIT licence;
+this engine uses it under the MIT licence: vendor/glm/copying.txt
+--------------------------------------------------------------------
+
+--------------------------------------------------------------------
+Google Filament  -  material model (shader mathematics only)
+https://github.com/google/filament
+Copyright (C) 2017 The Android Open Source Project
+Licensed under the Apache License, Version 2.0.
+
+Shaders/lib/Material.glsl derives its BRDF from Filament's shader
+sources (shaders/src/surface_brdf.fs, surface_shading_model_standard.fs,
+surface_shading_lit.fs): the height-correlated Smith visibility term,
+the Burley diffuse term, the reflectance-to-F0 mapping and the
+multiple-scattering energy compensation. No Filament code, binaries or
+build system are linked; what was taken is the material MODEL,
+reimplemented against this engine's own uniforms and its own split-sum
+BRDF table. This notice is kept because the Apache licence asks for
+it on derived work. Full licence text: https://www.apache.org/licenses/LICENSE-2.0
+--------------------------------------------------------------------
+
+--------------------------------------------------------------------
+Jolt Physics  -  rigid-body simulation and character controllers
+https://github.com/jrouwe/JoltPhysics
+Copyright 2021 Jorrit Rouwe
+Licensed under the MIT licence: vendor/jolt/LICENSE
+Modified: tools/patches/jolt_heightfield.cmake corrects HeightFieldShape::SetHeights
+when CMake configures. The file holds the reason and the two lines it changes.
+--------------------------------------------------------------------
+
+--------------------------------------------------------------------
+.NET host interface  -  starting .NET for C# scripting
+https://github.com/dotnet/runtime (src/native/corehost)
+Copyright (c) .NET Foundation and Contributors
+Licensed under the MIT licence: vendor/dotnet-host/LICENSE.txt
+
+Two headers only (hostfxr.h, coreclr_delegates.h), copied unchanged.
+The .NET runtime itself is not shipped with the engine: C# scripting
+uses the .NET installed on the machine.
+--------------------------------------------------------------------
+
+--------------------------------------------------------------------
+meshoptimizer  -  mesh simplification for LODs
+https://github.com/zeux/meshoptimizer
+Copyright (c) 2016-2026 Arseny Kapoulkine
+Licensed under the MIT licence: vendor/meshoptimizer/LICENSE.md
+--------------------------------------------------------------------
+
+--------------------------------------------------------------------
+miniaudio  -  audio playback and capture
+https://miniaud.io
+Copyright (c) David Reid
+Dual-licensed under MIT-0 or the Unlicense (public domain), at your
+choice: vendor/miniaudio/LICENSE. No notice is required.
+--------------------------------------------------------------------
+
+--------------------------------------------------------------------
+nlohmann/json  -  JSON reading and writing
+https://github.com/nlohmann/json
+Copyright (c) 2013-2026 Niels Lohmann
+Licensed under the MIT licence: vendor/json/LICENSE.MIT
+--------------------------------------------------------------------
+
+--------------------------------------------------------------------
+ozz-animation  -  animation runtime (solvers, sampling)
+https://github.com/guillaumeblanc/ozz-animation
+Copyright (c) 2020 Guillaume Blanc
+Licensed under the MIT licence: vendor/ozz/LICENSE.md
+
+Runtime only; the offline tools are not included.
+--------------------------------------------------------------------
+
+--------------------------------------------------------------------
+spdlog  -  logging (bundles the {fmt} library)
+https://github.com/gabime/spdlog
+Copyright (c) 2016 - present, Gabi Melman and spdlog contributors.
+Licensed under the MIT licence: vendor/spdlog/LICENSE
+The bundled {fmt} library (Copyright (c) 2012 - present, Victor
+Zverovich and {fmt} contributors) is under the MIT licence with an
+exception permitting binary distribution without the notice:
+vendor/spdlog/include/spdlog/fmt/bundled/fmt.license.rst
+--------------------------------------------------------------------
+
+--------------------------------------------------------------------
+stb_image / stb_image_write  -  image decoding and encoding
+https://github.com/nothings/stb
+Copyright (c) 2017 Sean Barrett
+Dual-licensed under the MIT licence or the public domain, at your
+choice. Carried inside vendor/tinygltf/. No notice is required.
+--------------------------------------------------------------------
+
+--------------------------------------------------------------------
+Tabler Icons  -  the editor's icon font
+https://tabler.io/icons
+Copyright (c) 2020-2026 Paweł Kuna
+Licensed under the MIT licence.
+File: vendor/tabler-icons/tabler-icons.ttf (the font only; the
+generated Engine/Editor/Icons.h maps its codepoints).
+--------------------------------------------------------------------
+
+--------------------------------------------------------------------
+tinygltf  -  glTF / GLB model import
+https://github.com/syoyo/tinygltf
+Copyright (c) 2017 Syoyo Fujita, Aurélien Chatelain and many
+contributors
+Licensed under the MIT licence: vendor/tinygltf/LICENSE
+--------------------------------------------------------------------
+
+--------------------------------------------------------------------
+ufbx  -  FBX model import
+https://github.com/ufbx/ufbx
+Copyright (c) 2020 Samuli Raivio
+Dual-licensed under the MIT licence or the Unlicense (public domain),
+at your choice: vendor/ufbx/LICENSE. No notice is required.
+--------------------------------------------------------------------
+
+--------------------------------------------------------------------
+Roboto (Medium)  -  the game UI's default face
+https://github.com/googlefonts/roboto
+Copyright 2011 Google Inc. All Rights Reserved.
+Licensed under the Apache License, Version 2.0
+(https://www.apache.org/licenses/LICENSE-2.0); the file comes from
+Dear ImGui's vendor/imgui/misc/fonts/.
+OPEN ITEM: Apache 2.0 asks that a copy of the licence accompany the
+font; the official text should be placed beside each shipped copy
+(LICENSE-Apache-2.0.txt) before a game using it is distributed.
+
+Copied into the sample projects that use it (Samples/UIShowcase,
+FionaProject/Assets/Fonts for the Winter menu).
+--------------------------------------------------------------------
+
+--------------------------------------------------------------------
+Fonts: Cinzel, EB Garamond, Indie Flower
+https://fonts.google.com/specimen/Cinzel
+https://fonts.google.com/specimen/EB+Garamond
+https://fonts.google.com/specimen/Indie+Flower
+Copyright the Cinzel Project Authors, the EB Garamond Project
+Authors, and Kimberly Geswein (Indie Flower).
+Licensed under the SIL Open Font License, Version 1.1:
+FionaProject/Assets/UI/fonts/OFL-Cinzel.txt, OFL-EBGaramond.txt.
+
+Shipped inside the sample project for the game UI. The OFL permits
+embedding in a commercial product; the OFL text must accompany the
+font files. The fonts may not be sold by themselves.
+--------------------------------------------------------------------
+
+
+====================================================================
+NOT DISTRIBUTED, BUT USED
+====================================================================
+
+- The editor loads Segoe UI from the Windows fonts folder at run
+  time (Engine/Editor/EditorUI.cpp). The font is not redistributed.
+
+- The installer (installer/FZE.iss) is built with Inno Setup and
+  bundles the Microsoft Visual C++ Redistributable (vc_redist.x64.exe),
+  which Microsoft licenses for redistribution with applications built
+  with Visual Studio. Neither tool is part of the engine.
+
+- vendor/godot-import/ (Godot Engine sources, MIT) is a reference
+  copy kept on the Author's machine for reading. It is not tracked
+  in the repository and nothing in the engine compiles or includes
+  it.
+
+
+====================================================================
+WHAT THIS MEANS IN PRACTICE
+====================================================================
+
+- Every line the Author wrote (Engine/, App/, Shaders/, Tests/,
+  tools/, docs/, the build scripts) is the Author's and is licensed
+  under LICENSE.txt.
+
+- The components above are not the Author's. Their licences allow use
+  in closed-source commercial software on condition that their
+  copyright notices travel with the distribution.
+
+- Nothing in this list requires you to open the source of your game.
+
+- The sample project's models, sounds and textures are a separate
+  matter: see ASSET-RIGHTS.txt.
+
+- When a new component is added to the engine, add it here in the
+  same change.

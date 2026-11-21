@@ -1,0 +1,73 @@
+#version 460 core
+// ============================================================================
+//  THE WEATHER MAP, AFTER A CAPTURE: WHAT IS ON TOP, AND WHAT IT HOLDS
+//
+//  The renderer has drawn the world from straight above (depth, and each
+//  surface's SurfaceType). This turns that into the map's static layer - the
+//  height of the top surface, relative to u_NewRefY, and its type - and moves
+//  the water the map held with it:
+//
+//    * the map moved by whole texels (u_Shift): a texel's water comes from
+//      where that ground was before;
+//    * ground the map has not seen starts from the far field (u_Far);
+//    * ⚠️ A NEW THING ON TOP STARTS WITHOUT THE PUDDLE UNDER IT. A car that
+//      drives over a puddle would otherwise carry it on its roof: where the
+//      top surface rose or fell by more than 15 cm the texel starts afresh
+//      (the far field's film, no standing water).
+//
+//  u_Mode 1: no capture - every texel's water set to u_Far (Settle).
+//
+//  Layers of the map: 0, 1 the water (ping-pong), 2, 3 the static (ping-pong).
+//  Water: r soak 0..1, g film 0..1, b standing water mm, a snow mm.
+//  Static: r top height - RefY (m; -1000 = nothing), g SurfaceType, a 1 if any.
+// ============================================================================
+
+layout(local_size_x = 16, local_size_y = 16) in;
+
+layout(rgba16f, binding = 0) uniform image2DArray u_Map;
+uniform sampler2D u_Depth;
+uniform sampler2D u_Surface;
+
+uniform int   u_Mode;
+uniform int   u_Res;
+uniform int   u_SrcState, u_DstState, u_SrcStatic, u_DstStatic;
+uniform int   u_HadOld;
+uniform vec2  u_Shift;
+uniform float u_OldRefY, u_NewRefY;
+uniform float u_Reach;
+uniform vec4  u_Far;
+
+void main() {
+    ivec2 id = ivec2(gl_GlobalInvocationID.xy);
+    if (id.x >= u_Res || id.y >= u_Res) return;
+
+    if (u_Mode == 1) {
+        vec4 st = imageLoad(u_Map, ivec3(id, u_SrcStatic));
+        vec4 w = st.a > 0.5 ? u_Far : vec4(0.0);
+        // Snow and standing water do not lie on water.
+        if (int(st.g + 0.5) == 12) w = vec4(0.0);
+        imageStore(u_Map, ivec3(id, u_DstState), w);
+        return;
+    }
+
+    float d = texelFetch(u_Depth, id, 0).r;
+    bool any_ = d < 0.99999;
+    float top = u_NewRefY + u_Reach - d * 2.0 * u_Reach;
+    float type = floor(texelFetch(u_Surface, id, 0).r * 255.0 + 0.5);
+    vec4 st = any_ ? vec4(top - u_NewRefY, type, 0.0, 1.0) : vec4(-1000.0, 0.0, 0.0, 0.0);
+
+    vec4 w = any_ ? u_Far : vec4(0.0);
+    if (any_ && u_HadOld == 1) {
+        ivec2 o = id + ivec2(u_Shift);
+        if (all(greaterThanEqual(o, ivec2(0))) && all(lessThan(o, ivec2(u_Res)))) {
+            vec4 os = imageLoad(u_Map, ivec3(o, u_SrcStatic));
+            vec4 ow = imageLoad(u_Map, ivec3(o, u_SrcState));
+            float oldTop = os.r + u_OldRefY;
+            if (os.a > 0.5 && abs(oldTop - top) < 0.15) w = ow;
+            else w = vec4(u_Far.r, u_Far.g, 0.0, u_Far.a);
+        }
+    }
+    if (int(type) == 12) w = vec4(0.0);      // SurfaceType::Water: the water's own shader
+    imageStore(u_Map, ivec3(id, u_DstStatic), st);
+    imageStore(u_Map, ivec3(id, u_DstState), w);
+}

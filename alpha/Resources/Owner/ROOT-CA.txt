@@ -1,0 +1,19 @@
+Fiona Zi Engine - the owner's certificates (Authenticode)
+
+Every program of the engine is signed with the owner's code-signing
+certificate, issued by the owner's root. Before trusting the root on a machine
+(tools\sign\trust-owner-root.cmd), check its thumbprint against this one.
+
+Root CA        CN=Nabras Root CA (Fiona Zi Engine), O=Nabras, C=OM
+               SHA-1 thumbprint  FEBF197A98257ABB9D8B6A2EE11CBE2D635495B9
+               valid 2026-10-23 .. 2046-10-23
+               FZE-Owner-Root-CA.cer
+
+Code signing   CN=Nabras (Fiona Zi Engine), O=Nabras, C=OM
+               SHA-1 thumbprint  876621D237333DC629B1A63F70D59ED3BCDED20C
+               valid 2026-10-23 .. 2031-10-23
+               FZE-Owner-CodeSigning.cer
+
+Made 2026-10-24 by tools\sign\make-owner-certificates.ps1. The owner's
+signing key (FINGERPRINT.txt) is separate and signs the release and source
+manifests (FZESign).

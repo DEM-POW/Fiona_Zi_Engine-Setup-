@@ -1,0 +1,51 @@
+#version 460 core
+// ============================================================================
+//  THE SCENE'S SOLIDS, COARSER - SEEN ALONG ONE AXIS
+//
+//  ⚠️ AN AVERAGE MAKES A WALL TRANSPARENT. The occupancy's mips used to be the
+//  plain average of each 2 x 2 x 2 block, and a 40 cm wall in a 1.5 m block
+//  averages to about a quarter - so a cone that reached the roof at that
+//  width read "a quarter blocked" and went on to the sky. A closed room saw
+//  23% of the sky through its own walls (FZESkyVisibilityTest).
+//
+//  What a cone needs is how much of the block's FACE is covered, looking
+//  through it the way the cone goes: a wall across the view covers all of it
+//  however thin. NVIDIA's voxel cone tracing (Crassin et al. 2011, the
+//  directional - "anisotropic" - mips): one chain per axis. Along the axis two
+//  cells one behind the other let through (1 - a)(1 - b); across it, the four
+//  columns are averaged. Transmittance through a pair is the same either way
+//  round, so three chains hold all six directions.
+//
+//  u_Mode 0: level 0, copied from the occupancy. u_Mode 1: level L+1 of the
+//  chain for u_Axis, from its level L.
+// ============================================================================
+
+layout(local_size_x = 4, local_size_y = 4, local_size_z = 4) in;
+
+layout(r8, binding = 0) writeonly uniform image3D u_Dst;
+layout(r8, binding = 1) readonly  uniform image3D u_Src;
+uniform vec3 u_DstDimF;
+uniform int  u_Mode;
+uniform int  u_Axis;               // 0 x, 1 y, 2 z
+
+float Load(ivec3 p, ivec3 srcMax) { return imageLoad(u_Src, min(p, srcMax)).r; }
+
+void main() {
+    ivec3 id = ivec3(gl_GlobalInvocationID);
+    if (any(greaterThanEqual(id, ivec3(u_DstDimF)))) return;
+    if (u_Mode == 0) { imageStore(u_Dst, id, imageLoad(u_Src, id)); return; }
+
+    ivec3 srcMax = imageSize(u_Src) - 1;
+    ivec3 along  = u_Axis == 0 ? ivec3(1, 0, 0) : u_Axis == 1 ? ivec3(0, 1, 0) : ivec3(0, 0, 1);
+    ivec3 acrossA = u_Axis == 0 ? ivec3(0, 1, 0) : ivec3(1, 0, 0);
+    ivec3 acrossB = u_Axis == 2 ? ivec3(0, 1, 0) : ivec3(0, 0, 1);
+    ivec3 base = id * 2;
+    float cover = 0.0;
+    for (int j = 0; j < 2; ++j)
+        for (int i = 0; i < 2; ++i) {
+            ivec3 c = base + acrossA * i + acrossB * j;
+            float a = Load(c, srcMax), b = Load(c + along, srcMax);
+            cover += 1.0 - (1.0 - a) * (1.0 - b);
+        }
+    imageStore(u_Dst, id, vec4(cover * 0.25, 0.0, 0.0, 0.0));
+}

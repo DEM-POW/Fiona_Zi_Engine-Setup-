@@ -1,0 +1,58 @@
+#version 460 core
+// =============================================================================
+//  WHERE THE GRASS HAS BEEN WALKED ON.
+//
+//  A map of the ground round the camera - 40 m, a texel every 16 cm - holding,
+//  for each spot, the lean pressed into the plants there (a tangent, in xz).
+//  Each frame:
+//
+//    * everything springs back a little: a stem pressed down is mostly up again
+//      in a second and settled by three (u_Recover, a 0.9 s time constant), so a
+//      character leaves a short trail that closes up behind it;
+//    * whatever is in the grass now (characters, rolling things - the scene's
+//      benders) pushes the plants round it outwards, hardest right under it.
+//
+//  ⚠️ THE MAP IS FIXED TO THE WORLD, NOT THE CAMERA, and wraps (toroidal): a
+//  texel is always the same patch of ground, so walking does not smear the
+//  trail across the grass, and nothing is copied as the window moves. Each
+//  texel remembers which patch it holds (zw); one that has just wrapped round
+//  to a new patch starts upright.
+// =============================================================================
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(rgba32f, binding = 0) uniform image2D u_Map;
+
+uniform int   u_Size;            // texels per side
+uniform float u_Texel;           // metres per texel
+uniform int   u_WindowMinX;      // the first world texel of the window round the camera
+uniform int   u_WindowMinZ;
+uniform float u_Recover;         // fraction of the lean kept this frame: exp(-dt / tau)
+uniform int   u_Count;
+uniform vec4  u_Benders[16];     // xyz world centre, w radius
+
+void main() {
+    ivec2 t = ivec2(gl_GlobalInvocationID.xy);
+    if (t.x >= u_Size || t.y >= u_Size) return;
+    ivec2 u_WindowMin = ivec2(u_WindowMinX, u_WindowMinZ);
+    // The world texel this map texel holds now: the one in the window that
+    // wraps onto it.
+    ivec2 w = u_WindowMin + ((t - u_WindowMin) % u_Size + u_Size) % u_Size;
+    vec4 v = imageLoad(u_Map, t);
+    if (ivec2(v.zw) != w) v = vec4(0.0, 0.0, vec2(w));      // a new patch of ground
+    vec2 lean = v.xy * u_Recover;
+
+    vec2 at = (vec2(w) + 0.5) * u_Texel;
+    for (int i = 0; i < u_Count; ++i) {
+        vec2 d = at - u_Benders[i].xz;
+        float r = u_Benders[i].w;
+        float dist = length(d);
+        if (dist > r + 0.35) continue;
+        // Bent most under the body, outwards all round it, fading over a hand's
+        // width beyond: tan 50 degrees at the middle. At 60 the grass round a walker
+        // lay down flat; it should part round the legs, not be flattened.
+        float k = 1.0 - smoothstep(r * 0.55, r + 0.35, dist);
+        vec2 push = (dist > 1e-3 ? d / dist : vec2(0.0, 1.0)) * k * 1.2;
+        if (dot(push, push) > dot(lean, lean)) lean = push;
+    }
+    imageStore(u_Map, t, vec4(lean, vec2(w)));
+}

@@ -1,0 +1,171 @@
+#version 460 core
+// =============================================================================
+//  GROWING A FIELD, ONCE A FRAME, ON THE GPU.
+//
+//  One thread per point of a lattice fixed in the world - spacing = one plant
+//  at the type's full density - over the square the camera can see plants in.
+//  Each point is a candidate plant, and everything about it is a hash of the
+//  lattice cell it sits in: where in the cell (the jitter), its rank for the
+//  distance thinning, its size, its yaw. So the plant in this spot is the same
+//  plant every frame, from every camera, and a meadow of millions costs the
+//  few thousand in view.
+//
+//  A candidate grows if the rule says so there (Engine/Terrain/TerrainFoliage.h):
+//
+//    density = layer x paint x slope x height range x patch
+//
+//      layer: how much of the ground here is painted with the layers it takes to
+//      paint: the brush's own density on top (thin a path, clear a yard)
+//      slope: fading out towards SlopeMax
+//      patch: the clumping noise - a meadow is patches, not a carpet
+//
+//  and a second rank of its own is under that density. Then the distance:
+//
+//  ⚠️ FEWER PLANTS AFAR, AND THEY GROW IN RATHER THAN POP. Past the near fifth
+//  of the draw distance the kept fraction falls as (near/d)^2, which is what
+//  keeps the count bounded (a ring's area grows with d; the plants in it do
+//  not); a kept plant is a little bigger to make up part of it (see below). A
+//  plant whose rank is about to drop out shrinks into the ground first - the
+//  edge of the field is plants growing, not appearing.
+//
+//  Survivors are culled against the view, counted with an atomic, and written
+//  where the draw reads them (lib/Foliage.glsl: FZEPlant).
+// =============================================================================
+layout(local_size_x = 8, local_size_y = 8) in;
+
+#include "lib/Foliage.glsl"
+
+uniform sampler2D u_Height;      // metres (TerrainComponent::Heights), R32F
+uniform sampler2D u_Splat;       // layer weights, RGBA8
+uniform sampler2D u_Paint;       // the brush's density, R8
+uniform int   u_HasPaint;
+uniform sampler2D u_Canopy;      // R crown overhead, G a trunk's footprint (Foliage::CanopyMap)
+uniform int   u_HasCanopy;
+uniform float u_UnderCanopy;     // how much of the grass is left under a full crown
+uniform vec3  u_Origin;          // world position of terrain sample (0, 0)
+uniform float u_Cell;            // metres between samples
+uniform int   u_Res;             // samples per side
+
+uniform int   u_FirstX, u_FirstZ;   // first lattice cell of this dispatch
+uniform int   u_CountX, u_CountZ;   // cells across
+uniform float u_Spacing;         // metres between lattice points
+uniform vec3  u_Camera;
+uniform vec4  u_Planes[6];       // the camera frustum, a.x + b.y + c.z + d >= 0 inside
+uniform float u_Range;           // draw distance, metres
+uniform float u_Near;            // full density inside this
+
+uniform vec4  u_LayerMask;
+uniform float u_SlopeCos;        // cos(SlopeMax)
+uniform vec2  u_HeightRange;     // local metres
+uniform float u_Clumping;
+uniform float u_ClumpSize;
+uniform float u_PlantHeight;     // metres
+uniform float u_HeightVar;
+uniform float u_Dryness;
+uniform float u_Lean;
+uniform uint  u_Seed;
+uniform uint  u_Capacity;        // plants per level of detail
+uniform float u_Radius;          // bounding radius of a plant, as a fraction of its height
+uniform vec2  u_LodDistance;     // past x the middle mesh, past y the lightest
+uniform float u_QualityShare;    // the share of the plants the quality level grows (Governor)
+uniform uint  u_Variants;        // models of this kind (TerrainFoliage.h: Variants), 1..8
+
+// Three lists per variant, one per level of detail: list = variant * 3 + lod, holding
+// [list * capacity, (list + 1) * capacity).
+layout(std430, binding = 0) writeonly buffer Plants { FZEPlant plants[]; };
+layout(std430, binding = 1) buffer Counter { uint count[]; };
+
+float Sample(ivec2 i) { return texelFetch(u_Height, clamp(i, ivec2(0), ivec2(u_Res - 1)), 0).r; }
+
+// ⚠️ THE GROUND AS IT IS DRAWN: linear across each of a cell's two triangles,
+// split from (x, z) to (x+1, z+1) - Terrain::Height and the terrain's mesh.
+// Bilinear would stand a plant on a different surface than the one it grows
+// out of, floating over a ridge cell or sunk in a hollow one.
+float GroundAt(vec2 c) {
+    c = clamp(c, vec2(0.0), vec2(float(u_Res - 1)));
+    ivec2 i = min(ivec2(floor(c)), ivec2(u_Res - 2));
+    vec2 f = c - vec2(i);
+    float h00 = Sample(i), h10 = Sample(i + ivec2(1, 0)), h01 = Sample(i + ivec2(0, 1)), h11 = Sample(i + ivec2(1, 1));
+    if (f.x >= f.y) return h00 + (h10 - h00) * f.x + (h11 - h10) * f.y;
+    return h00 + (h11 - h01) * f.x + (h01 - h00) * f.y;
+}
+
+void main() {
+    ivec2 g = ivec2(gl_GlobalInvocationID.xy);
+    if (g.x >= u_CountX || g.y >= u_CountZ) return;
+    ivec2 cell = ivec2(u_FirstX, u_FirstZ) + g;
+    uint h = FZE_FHash3(cell, u_Seed);
+
+    // ---- the distance first: most candidates far away stop here ----
+    vec2 xz = (vec2(cell) + vec2(FZE_FRand(h, 1u), FZE_FRand(h, 2u))) * u_Spacing;
+    float d = length(xz - u_Camera.xz);
+    if (d > u_Range) return;
+    float keep = d <= u_Near ? 1.0 : (u_Near / d) * (u_Near / d);
+    keep *= 1.0 - smoothstep(0.8 * u_Range, u_Range, d);
+    float rank = FZE_FRand(h, 0u);
+    if (rank >= keep) return;
+
+    // ---- the ground under it ----
+    vec2 c = (xz - u_Origin.xz) / u_Cell;
+    if (c.x < 0.0 || c.y < 0.0 || c.x > float(u_Res - 1) || c.y > float(u_Res - 1)) return;
+    float gh = GroundAt(c);
+    if (gh < u_HeightRange.x || gh > u_HeightRange.y) return;
+    ivec2 ci = ivec2(round(c));
+    float hl = Sample(ci - ivec2(1, 0)), hr = Sample(ci + ivec2(1, 0));
+    float hd = Sample(ci - ivec2(0, 1)), hu = Sample(ci + ivec2(0, 1));
+    vec3 n = normalize(vec3(hl - hr, 2.0 * u_Cell, hd - hu));
+    vec2 uv = (c + 0.5) / float(u_Res);
+
+    // ---- the rule ----
+    vec4 w = texture(u_Splat, uv);
+    float layer = clamp(dot(w, u_LayerMask) / max(w.x + w.y + w.z + w.w, 1e-3), 0.0, 1.0);
+    float paint = u_HasPaint == 1 ? texture(u_Paint, uv).r : 1.0;
+    float slope = smoothstep(u_SlopeCos - 0.06, u_SlopeCos + 0.06, n.y);
+    float patch_ = FZE_FClump(xz, u_ClumpSize, u_Seed + 101u);
+    float clumpF = mix(1.0, smoothstep(0.32, 0.68, patch_), u_Clumping);
+    float density = layer * paint * slope * clumpF;
+    if (u_HasCanopy == 1) {
+        vec2 cg = texture(u_Canopy, uv).rg;
+        density *= mix(1.0, u_UnderCanopy, cg.r) * (1.0 - step(0.5, cg.g));
+    }
+    if (FZE_FRand(h, 3u) >= density) return;
+
+    // ---- the plant ----
+    // Taller in the middle of a patch, shorter at its thin edge; and its own
+    // random share on top.
+    float s = u_PlantHeight * (1.0 + u_HeightVar * (FZE_FRand(h, 4u) * 2.0 - 1.0));
+    s *= mix(1.0, mix(0.7, 1.15, smoothstep(0.3, 0.8, patch_)), u_Clumping);
+    // Growing in at the edge of the field, instead of popping.
+    s *= smoothstep(0.0, 0.12, (keep - rank) / max(keep, 1e-4));
+    if (s < 0.03 * u_PlantHeight) return;
+    // ⚠️ A THINNED FIELD IS MADE UP BY BIGGER PLANTS, NOT FLATTER ONES. The
+    // plants the distance (or the quality level) leaves out were first made up
+    // by stretching the kept ones sideways - up to 2.5 times - and every
+    // leaning blade of a stretched clump was laid over flat: the far meadow
+    // turned to green flakes. A kept plant grows evenly instead, by the fourth
+    // root of what was left out and never past 30%; the rest of the far field
+    // is the ground's own paint, as in every engine's grass.
+    float spread = 1.0;
+    s *= clamp(pow(1.0 / max(keep * u_QualityShare, 1e-3), 0.25), 1.0, 1.3);
+
+    vec3 P = vec3(xz.x, u_Origin.y + gh, xz.y);
+    vec3 centre = P + vec3(0.0, 0.5 * s, 0.0);
+    float rad = s * u_Radius * spread + 0.3 * s;      // + the wind's reach
+    for (int i = 0; i < 6; ++i)
+        if (dot(u_Planes[i].xyz, centre) + u_Planes[i].w < -rad) return;
+
+    uint lod = d > u_LodDistance.y ? 2u : (d > u_LodDistance.x ? 1u : 0u);
+    // Which of the kind's models: the spot's own, every frame.
+    uint variant = min(uint(FZE_FRand(h, 7u) * float(u_Variants)), u_Variants - 1u);
+    uint list = variant * 3u + lod;
+    uint idx = atomicAdd(count[list], 1u);
+    if (idx >= u_Capacity) return;
+    idx += list * u_Capacity;
+    float tint = FZE_FValueNoise(xz / 9.0, u_Seed + 31u) * 0.6 + FZE_FRand(h, 6u) * 0.4;
+    float dryN = FZE_FValueNoise(xz / 21.0, u_Seed + 47u) * 0.75 + FZE_FValueNoise(xz / 4.0, u_Seed + 53u) * 0.25;
+    float dry = smoothstep(1.0 - u_Dryness - 0.12, 1.0 - u_Dryness + 0.12, dryN);
+    float yaw = FZE_FRand(h, 5u) * 6.2831853;
+    plants[idx].PosScale = vec4(P, s);
+    plants[idx].Data = vec4(uintBitsToFloat(packHalf2x16(vec2(yaw, spread))), tint, dry,
+                            uintBitsToFloat(packSnorm2x16(n.xz * u_Lean)));
+}

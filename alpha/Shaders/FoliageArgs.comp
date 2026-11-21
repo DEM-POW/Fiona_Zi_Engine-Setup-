@@ -1,0 +1,24 @@
+#version 460 core
+// =============================================================================
+//  THE DRAWS' INSTANCE COUNTS, FROM WHAT THE SCATTER COUNTED.
+//
+//  A plant model can have several parts with a material each (a trunk and its
+//  needles), and every part is one indirect draw of the same plants. The
+//  scatter counts plants once per variant and level of detail (a list); this
+//  copies each list's count into the draws that read it, on the GPU - nothing
+//  is read back.
+// =============================================================================
+layout(local_size_x = 32) in;
+
+struct Args { uint Count; uint InstanceCount; uint FirstIndex; int BaseVertex; uint BaseInstance; };
+layout(std430, binding = 1) readonly buffer Counter { uint count[]; };
+layout(std430, binding = 2) buffer Draws { Args args[]; };
+layout(std430, binding = 3) readonly buffer ListOf { uint listOf[]; };   // the list each draw reads
+uniform uint u_Capacity;
+uniform int  u_Draws;       // draws in the buffer
+
+void main() {
+    int i = int(gl_GlobalInvocationID.x);
+    if (i >= u_Draws) return;
+    args[i].InstanceCount = min(count[listOf[i]], u_Capacity);
+}

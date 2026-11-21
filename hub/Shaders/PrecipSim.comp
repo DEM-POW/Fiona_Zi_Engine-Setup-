@@ -1,0 +1,189 @@
+#version 460 core
+// ============================================================================
+//  WHAT FALLS, ONE STEP: every particle of one precipitation type in one box
+//
+//  (Weather/Precipitation.h.) Each particle relaxes toward the air it is in -
+//  the wind at its place (lib/Wind.glsl) plus its own fall and flutter -
+//  over its own time constant, and moves. Then:
+//
+//    * it WRAPS round the box's walls: the box moves with the camera, the
+//      particles stay where they are in the world;
+//    * it LANDS when it is below the top surface the weather map holds there:
+//      a landing near the camera writes a splash event (where, on what, how
+//      big) and the particle starts again at the top of the box. Hail bounces
+//      twice first;
+//    * an interior (a Weather Volume) takes it out without a splash;
+//    * its light is worked out (lib/PrecipLight.glsl) for the draw.
+//
+//  ⚠️ A PARTICLE WRAPPED INTO A WALL STARTS AGAIN, IT DOES NOT SPLASH. One
+//  that leaves the box on one side comes back on the other - possibly under a
+//  roof or inside a hill, and "below the top surface" there would have made a
+//  splash on that roof from a drop that never fell on it.
+// ============================================================================
+
+layout(local_size_x = 256) in;
+
+struct Drop { vec4 PosSeed; vec4 VelSize; vec4 Light; };
+layout(std430, binding = 9) buffer Drops { Drop drops[]; };
+struct SplashEvent { vec4 PosType; vec4 Info; };
+layout(std430, binding = 10) buffer Events { uint eventCount; uint ePad0, ePad1, ePad2; SplashEvent events[]; };
+
+#include "lib/Wind.glsl"
+#include "lib/WeatherMap.glsl"
+#include "lib/PrecipLight.glsl"
+
+uniform int   u_Count;           // particles alive in this box
+uniform int   u_Base;            // the box's first slot in the pool
+uniform vec3  u_BoxMin, u_BoxSize;
+uniform float u_Dt;
+uniform uint  u_Frame;
+uniform int   u_Init;
+// the type (Weather::PrecipType)
+uniform int   u_Form;            // 0 streak, 1 flake, 2 pellet, 3 mote
+uniform vec2  u_Size;            // mm
+uniform int   u_MP;
+uniform float u_Lambda;          // Marshall-Palmer slope, 1/mm
+uniform float u_FallSpeed;
+uniform int   u_Terminal;
+uniform float u_WindResp;
+uniform vec2  u_Flutter;         // metres, per second
+uniform float u_Shine;
+uniform int   u_Hits;            // 0 none, 1 water, 2 snow, 3 ice, 4 dust
+uniform float u_G;
+// what stops them
+uniform int   u_VolumeCount;
+uniform mat4  u_Volumes[8];
+// the splash budget
+uniform float u_SplashRadius;
+uniform int   u_EventMax;
+uniform float u_SplashKeep;
+
+uint Hash(uint x) {
+    x ^= x >> 16u; x *= 0x7feb352du;
+    x ^= x >> 15u; x *= 0x846ca68bu;
+    x ^= x >> 16u;
+    return x;
+}
+float Rand(inout uint s) { s = Hash(s + 0x9e3779b9u); return float(s & 0xffffffu) / 16777216.0; }
+
+// Weather::Precipitation::DiameterFor and FallFor, the same numbers.
+float Diameter(float u) {
+    float lo = u_Size.x, hi = max(u_Size.y, u_Size.x + 1e-3);
+    if (u_MP == 1) {
+        float l = u_Lambda;
+        return lo - log(1.0 - u * (1.0 - exp(-l * (hi - lo)))) / l;
+    }
+    return lo + (hi - lo) * u * u;
+}
+float Fall(float dmm, float u) {
+    if (u_Terminal == 1 && u_Form == 0) return max(9.65 - 10.3 * exp(-0.6 * dmm), 0.05);
+    float mean = 0.5 * (u_Size.x + u_Size.y);
+    float f = u_FallSpeed * (0.8 + 0.4 * u);
+    if (u_Form == 2) f *= sqrt(max(dmm / max(mean, 1e-3), 0.2));
+    return max(f, 0.01);
+}
+vec3 Target(vec3 p, float fall, float seed) {
+    vec3 v = FZE_WindAt(p) * u_WindResp + vec3(0.0, -fall, 0.0);
+    if (u_Flutter.x > 0.0) {
+        // Sway: the derivative of a circle a flutter wide, each on its own clock.
+        float w = 6.2831853 * u_Flutter.y * (0.7 + 0.6 * fract(seed * 13.7));
+        float ph = seed * 6.2831853 + u_WindParams.w * w;
+        v += vec3(cos(ph), 0.25 * sin(ph * 1.7), sin(ph * 0.83)) * (u_Flutter.x * w);
+    }
+    return v;
+}
+
+bool InVolume(vec3 p) {
+    for (int i = 0; i < u_VolumeCount; ++i) {
+        vec3 l = (u_Volumes[i] * vec4(p, 1.0)).xyz;
+        if (all(lessThan(abs(l), vec3(0.5)))) return true;
+    }
+    return false;
+}
+
+void Spawn(inout Drop d, uint idx, bool anywhere) {
+    uint s = Hash(idx * 9781u + u_Frame * 6271u + 17u);
+    vec3 r = vec3(Rand(s), Rand(s), Rand(s));
+    vec3 p = u_BoxMin + r * u_BoxSize;
+    // At the top, spread over the height one step of falling covers, so the
+    // ones starting together do not arrive as a sheet.
+    if (!anywhere) p.y = u_BoxMin.y + u_BoxSize.y - r.y * 0.6;
+    float seed = Rand(s);
+    float dmm = Diameter(seed);
+    float fall = Fall(dmm, fract(seed * 7.13));
+    d.PosSeed = vec4(p, seed);
+    d.VelSize = vec4(Target(p, fall, seed), dmm);
+    d.Light = vec4(0.0);
+}
+
+void main() {
+    uint i = gl_GlobalInvocationID.x;
+    if (i >= uint(u_Count)) return;
+    uint idx = uint(u_Base) + i;
+    Drop d = drops[idx];
+    if (u_Init == 1 || d.VelSize.w <= 0.0) Spawn(d, idx, true);
+
+    float seed = d.PosSeed.w;
+    float dmm = d.VelSize.w;
+    float fall = Fall(dmm, fract(seed * 7.13));
+    vec3 p = d.PosSeed.xyz;
+    vec3 v = d.VelSize.xyz;
+    // ⚠️ RELAXED, NOT SET. A drop takes about v/g to follow the air: most of a
+    // second for a big raindrop, a tenth for a flake, a second and a half for
+    // a hailstone - so a gust leans the snow over at once and the rain later.
+    float tau = max(fall / 9.81, 0.05);
+    v += (Target(p, fall, seed) - v) * (1.0 - exp(-u_Dt / tau));
+    p += v * u_Dt;
+
+    bool respawn = false, landed = false, wrapped = false;
+    vec3 rel = p - u_BoxMin;
+    if (rel.y < 0.0) {
+        respawn = true;                       // out of the bottom of the box, in the open
+    } else {
+        vec3 w = vec3(mod(rel.x, u_BoxSize.x), rel.y > u_BoxSize.y ? mod(rel.y, u_BoxSize.y) : rel.y, mod(rel.z, u_BoxSize.z));
+        wrapped = any(greaterThan(abs(w - rel), vec3(1e-4)));
+        p = u_BoxMin + w;
+    }
+
+    float top = -1e9;
+    int surf = 0;
+    if (!respawn && u_HasWeatherMap == 1) {
+        vec2 uv = FZE_WeatherUV(p.xz);
+        if (FZE_WeatherInside(uv)) {
+            vec4 st = FZE_WeatherStatic(uv);
+            if (st.a > 0.5) { top = st.r + u_WeatherRect.w; surf = int(st.g + 0.5); }
+            if (p.y < top) { if (wrapped) respawn = true; else landed = true; }
+        }
+    }
+    if (!respawn && !landed && InVolume(p)) respawn = true;
+
+    if (landed) {
+        uint s = Hash(idx * 31u + u_Frame * 977u);
+        if (u_Hits == 3 && d.Light.a < 1.5 && surf != 12) {
+            // Hail and sleet pellets bounce: a third of the speed back up,
+            // scattered, twice.
+            p.y = top + 0.01;
+            v = vec3(v.x * 0.4 + (Rand(s) - 0.5) * 1.5, abs(v.y) * 0.32, v.z * 0.4 + (Rand(s) - 0.5) * 1.5);
+            d.Light.a += 1.0;
+            landed = false;
+        }
+        if (u_Hits != 0 && length(p - u_CameraPos) < u_SplashRadius && Rand(s) < u_SplashKeep) {
+            uint e = atomicAdd(eventCount, 1u);
+            if (e < uint(u_EventMax))
+                events[e] = SplashEvent(vec4(p.x, top, p.z, float(surf)),
+                                        vec4(dmm, float(u_Hits), length(v), seed));
+        }
+        if (landed) respawn = true;
+    }
+
+    float bounces = d.Light.a;
+    if (respawn) {
+        Spawn(d, idx, false);
+    } else {
+        d.PosSeed.xyz = p;
+        d.VelSize.xyz = v;
+    }
+    d.Light.rgb = FZE_PrecipLight(d.PosSeed.xyz, u_G, u_Shine);
+    if (!respawn) d.Light.a = bounces;
+    drops[idx] = d;
+}

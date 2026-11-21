@@ -1,0 +1,73 @@
+#version 460 core
+// ---------------------------------------------------------------
+//  Fiona Zi Engine — which decals reach which part of the view
+//  Copyright (c) 2026 Nabras. All rights reserved.
+// ---------------------------------------------------------------
+//
+// LightCluster.comp's twin, on the same grid: one invocation per cluster, the
+// cluster's box in the world, every decal's world box against it, the
+// survivors written as a list IN THE ORDER THEY CAME (oldest first), so a
+// newer mark is applied over an older one.
+
+layout(local_size_x = 64) in;
+
+struct FZEDecal {
+    vec4 Row0, Row1, Row2;
+    vec4 Params;
+    vec4 Tint;
+    vec4 Lo, Hi;
+};
+layout(std430, binding = 7) readonly buffer FZEDecalBuffer { FZEDecal decals[]; };
+layout(std430, binding = 8) writeonly buffer FZEDecalClusterBuffer { uvec2 clusters[]; };
+layout(std430, binding = 9) writeonly buffer FZEDecalItemBuffer { uint items[]; };
+layout(std430, binding = 10) buffer FZEDecalCounter { uint used; };
+
+uniform mat4  u_InvViewProj;
+uniform vec3  u_Eye;
+uniform vec3  u_Forward;
+uniform vec3  u_Grid;
+uniform float u_Near;
+uniform float u_Far;
+uniform int   u_DecalCount;
+uniform int   u_ItemCapacity;
+
+#define MAX_PER_CLUSTER 32
+
+vec3 CornerAt(vec2 ndc, float depth) {
+    vec4 f = u_InvViewProj * vec4(ndc, 1.0, 1.0);
+    vec3 dir = normalize(f.xyz / f.w - u_Eye);
+    return u_Eye + dir * (depth / max(dot(dir, u_Forward), 1e-4));
+}
+
+void main() {
+    uint c = gl_GlobalInvocationID.x;
+    uint X = uint(u_Grid.x), Y = uint(u_Grid.y), Z = uint(u_Grid.z);
+    if (c >= X * Y * Z) return;
+    uint tx = c % X, ty = (c / X) % Y, tz = c / (X * Y);
+
+    vec2 n0 = vec2(float(tx), float(ty)) / vec2(X, Y) * 2.0 - 1.0;
+    vec2 n1 = vec2(float(tx + 1u), float(ty + 1u)) / vec2(X, Y) * 2.0 - 1.0;
+    float ratio = u_Far / u_Near;
+    float d0 = u_Near * pow(ratio, float(tz) / float(Z));
+    float d1 = u_Near * pow(ratio, float(tz + 1u) / float(Z));
+    if (tz + 1u == Z) d1 = 1e5;
+
+    vec3 lo = vec3(1e30), hi = vec3(-1e30);
+    for (int k = 0; k < 8; ++k) {
+        vec2 ndc = vec2((k & 1) != 0 ? n1.x : n0.x, (k & 2) != 0 ? n1.y : n0.y);
+        vec3 p = CornerAt(ndc, (k & 4) != 0 ? d1 : d0);
+        lo = min(lo, p); hi = max(hi, p);
+    }
+
+    uint list[MAX_PER_CLUSTER];
+    uint n = 0u;
+    for (int i = 0; i < u_DecalCount && n < uint(MAX_PER_CLUSTER); ++i) {
+        vec3 a = decals[i].Lo.xyz, b = decals[i].Hi.xyz;
+        if (all(lessThanEqual(a, hi)) && all(greaterThanEqual(b, lo))) list[n++] = uint(i);
+    }
+
+    uint offset = atomicAdd(used, n);
+    if (offset + n > uint(u_ItemCapacity)) { clusters[c] = uvec2(0u, 0u); return; }
+    for (uint k = 0u; k < n; ++k) items[offset + k] = list[k];
+    clusters[c] = uvec2(offset, n);
+}

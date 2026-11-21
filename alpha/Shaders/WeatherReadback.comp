@@ -1,0 +1,30 @@
+#version 460 core
+// ============================================================================
+//  A COARSE COPY OF THE WEATHER MAP FOR THE CPU
+//
+//  One texel in every u_Cell each way, packed into four words, read back a
+//  frame or two later behind a fence (WeatherSurface::At, Sheltered): gameplay
+//  and the sound ask "is it wet here, what is underfoot, is there a roof".
+//    x: half2(soak, film)   y: half2(depth mm, snow mm)
+//    z: the top height - RefY, as a float   w: SurfaceType | 0x100 if any surface
+// ============================================================================
+
+layout(local_size_x = 16, local_size_y = 16) in;
+
+uniform sampler2DArray u_Map;
+uniform int u_State, u_Static;
+uniform int u_Cells;
+uniform int u_Cell;
+
+layout(std430, binding = 8) writeonly buffer Out { uvec4 cells[]; };
+
+void main() {
+    ivec2 id = ivec2(gl_GlobalInvocationID.xy);
+    if (id.x >= u_Cells || id.y >= u_Cells) return;
+    ivec2 t = id * u_Cell + u_Cell / 2;
+    vec4 w = texelFetch(u_Map, ivec3(t, u_State), 0);
+    vec4 s = texelFetch(u_Map, ivec3(t, u_Static), 0);
+    uint any_ = s.a > 0.5 ? 0x100u : 0u;
+    cells[id.y * u_Cells + id.x] = uvec4(packHalf2x16(w.rg), packHalf2x16(w.ba),
+                                         floatBitsToUint(s.r), uint(s.g + 0.5) | any_);
+}

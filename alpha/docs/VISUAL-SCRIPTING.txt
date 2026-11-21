@@ -1,0 +1,225 @@
+FIONA VISUAL SCRIPTING
+======================
+Gameplay in Fiona Zi Engine is written as node graphs (.fzscript), compiled
+to a small program and run by the engine - in the editor's Play and in the
+shipped Player. It is the engine's only scripting language.
+
+THE ASSET
+---------
+A .fzscript is a CLASS. An object points at one (Add Component > Visual
+Script, then the asset slot); fifty enemies share one graph, and editing it
+edits all of them. What is per object lives on the object: the values of the
+graph's EXPOSED variables, set in the Inspector (an Entity variable is a slot
+you drag an object from the Outliner into).
+
+One asset holds:
+  - the EVENT GRAPH  - Begin Play, Tick (with Delta Seconds), End Play, and
+                       any Custom Events you add
+  - FUNCTIONS        - each a named sub-graph with typed inputs and outputs;
+                       tick Pure for one that is a value and has no exec pins
+  - VARIABLES        - typed; List makes a list of the type
+  - STRUCTS          - your own value types; Make X / Break X come free
+  - a PARENT         - another .fzscript this one extends (see Inheritance)
+
+THE NODES
+---------
+Everything a node needs is on the node: a literal on an unwired pin, the
+variable a Get reads, an event's name and parameters, a function's inputs on
+its Entry. Right-click the canvas or press Space for the palette; type to
+filter (it matches names, categories and keywords). F frames, RMB pans, a
+click on a wire removes it, dragging a wire into empty space opens the
+palette filtered to what can connect. Ctrl+Z undoes, Ctrl+Y (or
+Ctrl+Shift+Z) redoes - a drag is one step, so is a paste; a hundred steps
+are kept per tab.
+
+Pin shapes:  arrow = execution   dot = one value   square = a list
+             diamond = a struct.   Colour = the type's family.
+Pin rules:   Int -> Float widens silently; Float -> Int needs Truncate.
+             A list is not its element; Make Array builds one. A struct is
+             only itself; Break it for its fields. Entity/Component narrow
+             to Object, never the other way.
+
+Calls:  every engine node with a Target acts on the object the graph runs on
+        when Target is unwired ("self"), or on whatever you wire in - Self, an
+        Entity variable, or a Find. Nodes without a Target ask the world.
+
+THE ENGINE'S NODES
+------------------
+282 of them, all by registration, filed by category in the palette:
+  Entity      position, rotation, scale, name, tag, parent; FindByName,
+              FindAllWithTag, IsValid
+  Gameplay    health (Damage, Heal, Revive, IsDead), visibility, Shoot,
+              MoveSolid, LookAt, Forward, Attach to a bone, colour and
+              emissive, primitives, lights, the character (CharacterSet,
+              GetLook/SetLook, FreezePlayer), AimedEntity, IsEditor
+  Physics     impulses, velocity, body type, triggers, Jump, GroundHeight
+  Animation   clips and states, layers (Layer/Upper), Locomotion, params
+  Bones       per-bone overrides, LookAt, IK, rest positions
+  AI          parameters and state of an AI agent
+  Audio       one-shots, music, buses; sounds with a handle you can stop,
+              fade, pitch, move, or pin to an object (PlaySoundFollowing)
+  Effects     .fzefx effects by handle, particle bursts
+  Screen      letterbox, fade, subtitles, splash, video; ToScreen
+  UI          elements by (canvas tag, name): text, values, colours,
+              images, fonts, New/Remove/Clear; the blackboard; OnClick and
+              OnChange name the events raised on the canvas's graph
+  Networking  host/connect, replicated vars, chat, state, online play
+  Voice       voice chat and the microphone
+  Input       actions, axes, keys, mouse, gamepad, TextEdit, rebinding,
+              the cursor, OwnEscape
+  Camera      shake, FOV, mode, roll, position, forward, Ray, Activate
+  Scene       LoadScene, ReloadScene, Quit, Time, random, PlayEffect
+  World       terrain tiles, biome and height of the procedural world
+  Sculpt      SDF shapes built into a mesh
+  Math        vectors, Lerp, Clamp, Sin/Cos, Sqrt, SmoothStep, Truncate;
+              quaternions as Vector4 (MakeQuat, QuatMultiply, RotateVector)
+  String
+Hover a node in the palette for what it does; the pin names are the
+parameters. A Method takes a Target; a Static asks the world; a pure node
+(no execution pins) is a question.
+
+THE ENGINE RAISING EVENTS
+-------------------------
+The engine raises Custom Events on graphs by NAME:
+  - a UI element's On Click names an event of the graph on the CANVAS
+    object; it is raised with the element's name. On Change is raised
+    with the name and the new value. Set them in the UI Designer or with
+    UI.OnClick / UI.OnChange.
+  - a mark on a keyframe animation's timeline names an event of the graph
+    on the animated object, raised when the playhead crosses it.
+  - an animation notify on a skinned mesh is raised with its text and
+    number.
+  - a menu button's action string "event:<Name>" raises the event on
+    EVERY running graph that has it - so can the console: type a name.
+
+FLOW CONTROL
+------------
+Branch, Sequence, For Loop, While Loop, For Each - and the nodes that wait,
+remember and choose:
+  Delay                Completed runs after Seconds; the run that reached it
+                       goes on at once (a Sequence's next pin is not held
+                       up). Asked again while waiting it keeps the first
+                       wait; Retriggerable Delay starts over.
+  Gate                 Enter reaches Exit only while open; Open, Close and
+                       Toggle set it. Start Closed for a gate that begins shut.
+  Flip Flop            A, then B, then A - alternating; Is A says which.
+  Do Once / Do N       Through once (or N times, counting) until Reset.
+  Switch on Int/String Runs the pin named for the value; Default otherwise.
+                       Rename the pins to the cases; + case adds one.
+  Select               A or B by a Bool - a value, not a branch.
+  Timeline             A clock from 0 to Length: Update runs every frame it
+                       plays with Alpha (0..1 on the chosen curve) and Time;
+                       Finished once at the end. Play, Play from Start, Stop,
+                       Reverse, Reverse from End drive it; Loop wraps.
+Gate, Do Once, Do N, Flip Flop and Timeline remember PER OBJECT: fifty
+guards sharing one graph have fifty gates. Delay and Timeline cannot be
+used inside a function (a function returns now); put them in the event
+graph. Math has Modulo, Min, Max, Negate, Not Equal, >= and <= as well.
+
+CUSTOM EVENTS
+-------------
+A Custom Event node is the definition: its name and its outputs are the
+parameters. "Call <Name>" appears in the palette for it (with a Target, so
+one object can raise it on another). "Call Event" raises any object's event
+by name when this asset cannot see it. The engine raises events by name too.
+
+LISTS, STRUCTS, REFERENCES
+--------------------------
+Get Names -> Add puts INTO the variable's list (the wire carries the list
+itself); Set Copy = Names makes a copy. For Each walks a list; For Loop and
+While Loop are jumps, not unrollings. A struct is a value: Break, change,
+Make. A reference never comes from a literal: Self, an exposed variable set
+in the Inspector, or FindByName / FindAllWithTag / GetParent.
+
+INHERITANCE
+-----------
+Set Parent to another .fzscript. You inherit its variables, functions,
+structs and events. Define a function or event of the same name to override
+it; a call by that name - from ANYWHERE in the chain, including the parent's
+own graph - reaches your version, and "Parent: X" reaches the one you
+replaced. An override keeps its parent's signature. Recursion is refused.
+
+DEBUGGING
+---------
+Save the graph, then click a node and the breakpoint button (o). Play. The
+game stops when execution arrives at that node; the toolbar shows PAUSED
+and the instance's variables; Continue runs on, Step stops at the next
+node. Breakpoints inside functions and inside parents' graphs work too.
+
+HOT RELOAD
+----------
+Save a graph while the game runs (from this panel or any editor): the next
+frame recompiles it and every graph that extends it, and rebinds each
+object to the new program CARRYING ITS VARIABLES ACROSS by name - Begin
+Play does not run again. A graph that no longer compiles is reported and
+the running version stays.
+
+TABS AND BOOKMARKS
+------------------
+Several assets open as tabs; closing a dirty one asks. Ctrl+1..9 on the
+canvas bookmarks the current graph and view; 1..9 returns to it; the
+bookmark button lists them.
+
+THE PLUGIN API: ADDING NODES FROM C++
+-------------------------------------
+No node is written by hand. Register a function and it is a node, with pins
+deduced from the signature, in the palette, compiled and callable:
+
+    #include "Script/Reflection.h"
+
+    // a verb on an object: the node gets a Target (self when unwired)
+    static void  Open(Entity& e)              { ... }
+    // a question about an object: const => a PURE node, no exec pins
+    static bool  IsOpen(const Entity& e)      { ... }
+    // a question to the world: no Target; say whether it is pure
+    static float WindSpeed()                  { ... }
+
+    VS::Register("Doors")                     // the palette category
+        .Method("Open",      &Open)
+        .Method("IsOpen",    &IsOpen)
+        .Static("WindSpeed", &WindSpeed, {}, "Metres per second.", /*pure*/ true);
+
+Rules:
+  - plain types only: bool, int, float, std::string, glm::vec2/3/4,
+    uint32_t/uint64_t (an entity id), std::vector<any of these> (a list).
+    A type the graph has no pin for is a BUILD error at the registration.
+  - a const member function or a const Entity& first parameter is pure.
+  - registration is idempotent; call VS::Reflection::GenerateNodes() after a
+    plugin registers late, and the new nodes appear.
+  - do not write gameplay in the registration file: point at the function
+    the engine already has, so the graph and C++ share one body.
+    Engine/Script/EngineAPI.cpp is where the engine's own verbs live.
+
+TWO WORKED GAMES
+----------------
+  Assets/Scenes/VSLab.fzescene          the lab: seven small graphs, one each
+                                        for spinning, bobbing, chasing, a
+                                        conductor raising events, a door, a
+                                        counter (tools/vs_lab.cpp builds it)
+  Assets/Scenes/WobbleWorks.fzescene    the game, on graphs (tools/wobble_port.cpp
+                                        wrote them, ADDITIVELY, into the
+                                        hand-edited scene): BP_WobblePlayer
+                                        (team feel from the blackboard, cursor,
+                                        the arrival shot on a Delay, jump/land
+                                        on the grounded edge, the fall respawn,
+                                        Escape on a Flip Flop, net state),
+                                        BP_Ball (the body follows and ROLLS by
+                                        an accumulated quaternion), BP_RemoteBall
+                                        (a slot in the player list), BP_Workshop
+                                        (a Duty function for the crane, the hook
+                                        on a spring, the press, the belt, fans,
+                                        the crew's breath - 175 nodes), BP_Hud.
+  Both run headless with checks (FZEVSLab, FZEWobblePort <project>) and in Play.
+
+FILES
+-----
+  Engine/Nodes/NodeGraph.*        the framework: nodes, pins, wires, files
+  Engine/Script/VisualScript.*    the language: types, registry, the asset
+  Engine/Script/Reflection.*      C++ -> nodes
+  Engine/Script/EngineAPI.*       the engine as gameplay sees it (280 verbs)
+  Engine/Script/EngineNodes.cpp   their registration - the palette
+  Engine/Core/GameRequests.*      what a graph asks of the runtime: a scene
+                                  change, a spawn, quitting, owning Escape
+  Engine/Script/VSCompiler.*      graph -> program, the runtime, the debugger
+  Engine/Script/VisualScriptSystem.cpp   binding objects to programs, hot reload
+  Engine/Editor/VisualScriptPanel.*      the editor

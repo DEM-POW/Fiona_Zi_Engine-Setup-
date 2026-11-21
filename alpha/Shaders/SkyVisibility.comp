@@ -1,0 +1,114 @@
+#version 460 core
+// ============================================================================
+//  HOW MUCH OF THE SKY EACH POINT CAN SEE
+//
+//  One invocation per probe of the grid (SkyVisibility.h): cones marched up
+//  through the occupancy volume, each asking "does this way reach the open
+//  sky", the answers kept as spherical harmonics (L1: an average and a
+//  direction) - the bent cone a surface reads its sky light through. This is
+//  what Unreal's Distance Field AO and Unity's Adaptive Probe Volumes' sky
+//  occlusion answer, from the same kind of record: the scene's solids, coarse,
+//  sampled along wide cones.
+//
+//  ⚠️ THE GROUND BELOW IS AS LIT AS THE PLACE ABOVE IT. Below the horizon the
+//  sky light is the ground's own light (SkyAtmosphere::SetGroundLight) - and a
+//  cone going down always ends on the floor right there. Counting that floor
+//  as "occluded" would take the sunlit pavement's bounce off every wall
+//  outdoors; counting it as open would light a cellar floor from beneath. So
+//  the downward half is not marched at all: it is as open as the upper half
+//  turned out to be (outdoors, the ground under you is lit; under a roof, it
+//  is in the same shade you are).
+//
+//  ⚠️ A PROBE INSIDE A SOLID IS NOT A PROBE. Its cell is occupied, it sees
+//  nothing, and a surface beside it would read black through the trilinear
+//  filter. It is marked (L0 = -1) and the dilation pass fills it from its
+//  open neighbours - Unity's "probe validity" and "dilation".
+// ============================================================================
+
+layout(local_size_x = 4, local_size_y = 4, local_size_z = 4) in;
+
+layout(rgba16f, binding = 0) writeonly uniform image3D u_Out;
+uniform sampler3D u_Occupancy;     // R8, level 0: is this probe inside a solid
+// The occupancy seen along each axis, with mips (SkyOccupancyMip.comp): how
+// much of a block's face is covered looking through it that way.
+uniform sampler3D u_OccX, u_OccY, u_OccZ;
+uniform vec3  u_ProbeDimF;        // probes, as floats
+uniform vec3  u_OccDimF;          // occupancy cells, as floats
+uniform vec3  u_VolumeSize;        // metres
+uniform int   u_SliceZ0;           // this dispatch's first z slice of probes
+uniform float u_MaxDistance;       // metres a cone looks before it calls the sky open
+
+const float PI = 3.14159265;
+const int   kUp = 24;              // cones over the upper hemisphere
+const float kAperture = 0.32;      // tan of the half-angle: ~18 degrees, 24 of them cover it
+
+// SH L1 basis.
+vec4 SH(vec3 d) { return vec4(0.282095, 0.488603 * d.y, 0.488603 * d.z, 0.488603 * d.x); }
+
+// Upper hemisphere, evenly: a Fibonacci spiral over z in (0, 1].
+vec3 UpDir(int i) {
+    float z = 1.0 - (float(i) + 0.5) / float(kUp);           // cos of the angle from up
+    float r = sqrt(max(1.0 - z * z, 0.0));
+    float phi = 2.39996323 * float(i);
+    return vec3(r * cos(phi), z, r * sin(phi));
+}
+
+float Cone(vec3 start, vec3 dir) {
+    float cell = u_VolumeSize.x / u_OccDimF.x;           // metres, finest level
+    float t = cell * 1.5;                                      // leave the probe's own cell
+    float open = 1.0;
+    for (int s = 0; s < 28 && open > 0.02 && t < u_MaxDistance; ++s) {
+        float diameter = max(cell, 2.0 * kAperture * t);
+        float lod = log2(diameter / cell);
+        vec3 p = start + dir * t / u_VolumeSize;
+        // Out of the volume: nothing recorded beyond it - the open sky (or the
+        // edge of the world we keep; either way, not a wall we know of).
+        if (any(lessThan(p, vec3(0.0))) || any(greaterThan(p, vec3(1.0)))) break;
+        // The cover a cone going this way meets: each axis's chain weighted by
+        // how much of the direction is along it (the weights sum to one).
+        vec3 w = dir * dir;
+        float occ = w.x * textureLod(u_OccX, p, lod).r
+                  + w.y * textureLod(u_OccY, p, lod).r
+                  + w.z * textureLod(u_OccZ, p, lod).r;
+        // A block one cone-width deep lets through 1 - cover; a step of three
+        // quarters of it, that to the three quarters.
+        // ⚠️ THE 1.5 IS MEASURED, NOT A TASTE. The filter blends a wall's block
+        // with the open one beside it, so a step that lands off the wall's
+        // centre reads 0.6 of it and a cone slips through. FZESkyVisibilityTest
+        // swept it: a closed room's floor sees 0.083 of the sky at 1.25, 0.029
+        // at 1.5, 0.006 at 1.75 - while the ground outside beside a 4.4 m wall
+        // (0.9 by hand) reads 0.80, 0.77, 0.75. 1.5 is where the room is dark
+        // and the outside has not yet started to lose its light.
+        open *= pow(max(1.0 - clamp(occ * 1.5, 0.0, 1.0), 0.0), 0.75);
+        t += diameter * 0.75;
+    }
+    return open;
+}
+
+void main() {
+    ivec3 id = ivec3(gl_GlobalInvocationID) + ivec3(0, 0, u_SliceZ0);
+    if (any(greaterThanEqual(id, ivec3(u_ProbeDimF)))) return;
+    vec3 uvw = (vec3(id) + 0.5) / u_ProbeDimF;
+
+    if (textureLod(u_Occupancy, uvw, 0.0).r > 0.5) {
+        imageStore(u_Out, id, vec4(-1.0, 0.0, 0.0, 0.0));       // inside a solid: dilation fills it
+        return;
+    }
+
+    vec4 sh = vec4(0.0);
+    float upper = 0.0;
+    for (int i = 0; i < kUp; ++i) {
+        vec3 d = UpDir(i);
+        float v = Cone(uvw, d);
+        upper += v;
+        sh += v * SH(d);
+    }
+    upper /= float(kUp);
+    // Each upper cone stands for 2pi/kUp of solid angle.
+    sh *= 2.0 * PI / float(kUp);
+    // The lower hemisphere, as open as the upper (see above): its SH, times
+    // that openness - L0 adds 2pi*0.282095, L1's y adds -pi*0.488603 (the
+    // integral of y over the lower half), x and z cancel.
+    sh += upper * vec4(2.0 * PI * 0.282095, -PI * 0.488603, 0.0, 0.0);
+    imageStore(u_Out, id, sh);
+}
