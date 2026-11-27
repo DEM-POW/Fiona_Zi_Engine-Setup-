@@ -271,27 +271,49 @@ vec3 FZE_LightSurface(FZESurface surf, vec3 P, vec3 N, vec3 V,
     // read away for as long as the LUT has existed.
     // u_HasIBL is the engine's own gate: the LUT is bound only when it is 1, so this
     // never reads an unbound sampler.
+    // ⚠️ READ ONCE, USED TWICE: the split sum below asks the table at the same
+    // (N.V, roughness) - neither changes in between - and read it a second time.
+    // One texture read a pixel less, the same numbers (docs/BENCHMARKS.md, Phase 3).
+    vec2 dfg0 = vec2(0.0);
     if (u_HasIBL == 1) {
-        vec2 dfg0 = texture(u_BRDFLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
+        dfg0 = texture(u_BRDFLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
         FZE_EnergyCompensation(surf, dfg0);
     }
 
 
     // ---- Sun (with shadows) ----
     vec3 L = normalize(u_SunDir);
+    // FZE_EXP_*: measuring switches, set only by FZE_SHADERDEFINES for one run
+    // (docs/BENCHMARKS.md): each compiles one part out, so its cost can be read.
+#if defined(FZE_EXP_NO_SUNSHADOW)
+    float shadow = 1.0;
+#elif defined(FZE_SUN_SHADOW_GIVEN)
+    // The shader set g_FZESunShadow before calling (Foliage.frag): no second copy of
+    // DirectionalShadow compiled in for a branch that never runs.
+    float shadow = g_FZESunShadow;
+#else
     float shadow = g_FZESunShadow >= 0.0 ? g_FZESunShadow : DirectionalShadow(P, N, L);
+#endif
     // ⚠️ THE CONTACT TERM MULTIPLIES THE SUN'S SHADOW AND NOTHING ELSE. It is a
     // statement about one light being blocked over a short distance, not about
     // how open the sky is - applying it to the ambient as well would darken the
     // inside of every shadow twice and is how contact shadows get their
     // reputation for looking like grime.
+#ifndef FZE_EXP_NO_CONTACT
     shadow *= screenTerms.g;
+#endif
+#ifndef FZE_EXP_NO_CLOUDSHADOW
     shadow *= CloudShadow(P, L);   // passing clouds
+#endif
     // What only the caller knows blocks the sun: Lit's parallax relief shading
     // itself (pebbles shading the dirt behind them). 1 when nothing does.
     shadow *= sunOcclusion;
     // The sun, as it arrives here rather than as it left.
+#ifdef FZE_EXP_NO_SUNAIR
+    vec3 sunHere = u_SunIlluminance;
+#else
     vec3 sunHere = u_SunIlluminance * FZE_SunThroughAir(FZE_AtmosphereFromUniforms(), P, L);
+#endif
     vec3 Lo = FZE_ShadeLight(surf, N, V, L, sunHere, shadow);
 
     // ---- The lamps: every directional light, then this pixel's cluster ----
@@ -304,6 +326,9 @@ vec3 FZE_LightSurface(FZESurface surf, vec3 P, vec3 N, vec3 V,
     uint cl = FZE_ClusterIndex(gl_FragCoord.xy, P);
     uvec2 range = fzeClusters[cl];
     int total = u_ClusterBypass == 1 ? u_LightCount : u_DirectionalCount + int(range.y);
+#ifdef FZE_EXP_NO_LAMPS
+    total = 0;
+#endif
     for (int k = 0; k < total; ++k) {
         int i = (k < u_DirectionalCount || u_ClusterBypass == 1)
               ? k : int(fzeClusterItems[range.x + uint(k - u_DirectionalCount)]);
@@ -357,7 +382,11 @@ vec3 FZE_LightSurface(FZESurface surf, vec3 P, vec3 N, vec3 V,
     // The film on top (rain, varnish, car paint): its Fresnel and reflection.
     float coatF = 0.0, coatPR = 1.0;
     vec3 coatSpec = vec3(0.0);
+#ifdef FZE_EXP_NO_IBL
+    if (false) {
+#else
     if (u_HasIBL == 1) {
+#endif
         // Split-sum image-based lighting from the sky-baked cubemaps.
         vec3 F = FresnelSchlickRoughness(NdotV, F0, roughness);
         vec3 kD = (vec3(1.0) - F) * (1.0 - metallic);
@@ -382,7 +411,11 @@ vec3 FZE_LightSurface(FZESurface surf, vec3 P, vec3 N, vec3 V,
             float lod = roughness * float(max(u_PrefilterMips - 1, 1));
             prefiltered = textureLod(u_PrefilterMap, R, lod).rgb * u_IBLScale;
         }
+#ifdef FZE_EXP_OLD_LUT   // the second read again, to measure what it cost
         vec2 brdf = texture(u_BRDFLUT, vec2(NdotV, roughness)).rg;
+#else
+        vec2 brdf = dfg0;   // = texture(u_BRDFLUT, vec2(NdotV, roughness)).rg, read above
+#endif
         specDFG = (F * brdf.x + brdf.y) * surf.energyCompensation;
         // Paint does not mirror the sky; a toon metal still shines.
         if (surf.model == 1) specDFG *= mix(0.3, 1.0, metallic);
@@ -436,6 +469,7 @@ vec3 FZE_LightSurface(FZESurface surf, vec3 P, vec3 N, vec3 V,
     // reflects the ceiling's shade, not the blue overhead - widening to the
     // diffuse answer as the surface roughens. A local reflection probe already
     // holds what the room looks like, so it is left as it is.
+#ifndef FZE_EXP_NO_SKYVIS
     {
         float skyW;
         vec4 skySH = FZE_SkyVisSH(P, N, skyW);
@@ -450,6 +484,7 @@ vec3 FZE_LightSurface(FZESurface surf, vec3 P, vec3 N, vec3 V,
             }
         }
     }
+#endif
 
     // ⚠️ THE SCREEN FIRST, THE SKY FOR WHAT IT DOES NOT HOLD - the reflection
     // hierarchy of Unreal's and Unity's reflection environment. Where last
@@ -457,6 +492,7 @@ vec3 FZE_LightSurface(FZESurface surf, vec3 P, vec3 N, vec3 V,
     // is what the reflection IS: the probe or the sky only fills the rest. Each
     // lobe takes it by its own roughness, so a wet film over rough stone
     // mirrors the street while the stone under it stays matt.
+#ifndef FZE_EXP_NO_SSR
     {
         vec4 ssr = FZE_ScreenReflection(P);
         if (ssr.a > 0.0) {
@@ -468,6 +504,7 @@ vec3 FZE_LightSurface(FZESurface surf, vec3 P, vec3 N, vec3 V,
             }
         }
     }
+#endif
     envSpec += coatSpec;
 
     // What the reflection pass needs of this surface: the normal, and the

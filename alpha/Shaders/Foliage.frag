@@ -76,6 +76,12 @@ uniform float u_PicGrid;
 #include "lib/SkySample.glsl"
 #include "lib/AtmosphereUniforms.glsl"
 #include "lib/Weather.glsl"
+// ⚠️ THIS SHADER WORKS OUT THE SUN'S SHADOW ITSELF and hands it to FZE_LightSurface
+// (g_FZESunShadow, below). Said here, where the program is compiled, Lighting.glsl
+// does not build its own copy of DirectionalShadow beside this one - a copy that
+// never ran, and that the driver translated anyway at the first draw of every run
+// (the foliage's first draw: 5.4 s on a UHD 620, 2026-11-27, FZE_DRAWCOST).
+#define FZE_SUN_SHADOW_GIVEN
 #include "lib/Lighting.glsl"
 #include "lib/SimpleLight.glsl"
 #include "lib/TreePicture.glsl"
@@ -218,9 +224,16 @@ void main() {
 #endif
     if ((u_Debug > 0 && u_Debug < 5) || u_Debug >= 6) {
         vec3 Ld = normalize(u_SunDir);
+        // The same shadow as above (same point, normal and sun), not two more copies of
+        // DirectionalShadow compiled into every program for a debug view.
+#ifdef FZE_SIMPLE_LIT
+        float sunFull = DirectionalShadow(P, Nm, Ld);   // the simple path took its own single tap
+#else
+        float sunFull = sunShadow;
+#endif
         float v = u_Debug == 2 ? max(dot(N, Ld), 0.0)
-                : u_Debug == 3 ? DirectionalShadow(P, Nm, Ld) * CloudShadow(P, Ld) * screenTerms.g
-                : u_Debug == 6 ? DirectionalShadow(P, Nm, Ld)
+                : u_Debug == 3 ? sunFull * CloudShadow(P, Ld) * screenTerms.g
+                : u_Debug == 6 ? sunFull
                 : u_Debug == 7 ? CloudShadow(P, Ld)
                 : u_Debug == 8 ? screenTerms.g
                 : screenTerms.r;

@@ -2,7 +2,7 @@
 	"hub": "hub/fze-update.json",
 	"releases": [
 		{
-			"build": 202611212102,
+			"build": 202611271732,
 			"channel": "Alpha",
 			"manifest": "alpha/fze-update.json",
 			"version": "0.1.0 Alpha"

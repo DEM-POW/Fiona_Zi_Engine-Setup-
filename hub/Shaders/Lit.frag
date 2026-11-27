@@ -565,8 +565,10 @@ void main() {
 
     // Every light, through the one lighting function the ground uses too.
     float sunOcclusion = 1.0;
+#ifndef FZE_EXP_NO_POMSHADOW   // FZE_EXP_*: measuring switches (docs/BENCHMARKS.md)
     if (u_HasHeight == 1 && pomDepth > 0.001)
         sunOcclusion = FZE_ParallaxShadow(mc, reliefTBN, pomDepth, normalize(u_SunDir), reliefUV);
+#endif
     // ⚠️ THE HOLLOWS OF A SURFACE ARE IN THEIR OWN SHADOW WHEN THE SUN IS LOW.
     // The occlusion map says how much of the sky a point in a crevice sees; a
     // sun lower than the crevice's walls is part of the sky it does not see.
@@ -580,7 +582,9 @@ void main() {
     if (u_HasAO == 1) {
 #endif
         float NdotLg = abs(dot(normalize(v_Normal), normalize(u_SunDir)));
+#ifndef FZE_EXP_NO_MICROSHADOW
         sunOcclusion *= clamp(NdotLg + 2.0 * ao * ao - 1.0, 0.0, 1.0);
+#endif
     }
     vec3 color = FZE_LightSurface(surf, v_WorldPos, N, V, albedo, metallic, reflectance, ao,
                                   screenTerms, sunOcclusion, emissive);

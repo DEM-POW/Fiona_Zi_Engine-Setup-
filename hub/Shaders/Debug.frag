@@ -1,6 +1,6 @@
 #version 460 core
 
-in vec3 v_Color;
+in vec4 v_Color;
 out vec4 FragColor;
 
 // The depth test, done here (DebugRenderer::BeginSceneDepth). The scene was
@@ -55,5 +55,5 @@ bool BehindScene()
 void main()
 {
     if (u_SceneTest == 1 && BehindScene()) discard;
-    FragColor = vec4(v_Color, 1.0);
+    FragColor = v_Color;
 }

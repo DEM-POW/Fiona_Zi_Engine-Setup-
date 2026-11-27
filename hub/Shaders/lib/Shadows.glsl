@@ -146,36 +146,58 @@ float FZE_SunLevelShadow(int l, mat4 vp, vec4 info, vec3 P, vec3 N, vec3 L, floa
     vec3 Pb = P + N * (mPerTexel * (0.75 + slope * 0.75));
     vec3 p = (vp * vec4(Pb, 1.0)).xyz * 0.5 + 0.5;
     float ref = p.z - (mPerTexel * slope * 0.35 + mPerTexel * 0.25) / mPerDepth;
-    if (u_ShadowFilter == 0) return FZE_TentShadow(p.xy, float(l), ref, 1.0, 2);
-    if (!hardening || u_ShadowFilter < 2) return FZE_TentShadow(p.xy, float(l), ref, 2.5, 4);
 
-    // Contact hardening: the blockers' depth, then a penumbra as wide as the sun
-    // makes it at that distance.
-    vec2 texel = 1.0 / vec2(textureSize(u_ShadowDepth, 0).xy);
-    float blockers = 0.0, found = 0.0;
-    const float kSearch = 5.0;                                   // texels
-    for (int i = 0; i < 12; ++i) {
-        // A fixed Vogel spiral: the same twelve everywhere (no noise).
-        float r = sqrt((float(i) + 0.5) / 12.0) * kSearch;
-        float a = float(i) * 2.39996323;
-        float d = texture(u_ShadowDepth, vec3(p.xy + vec2(cos(a), sin(a)) * r * texel, float(l))).r;
-        if (d < ref) { blockers += d; found += 1.0; }
+    // ⚠️ ONE TENT, CALLED ONCE, AT THE END. Each branch below used to return its own
+    // FZE_TentShadow - five inlined copies of a sixteen-fetch filter in this function,
+    // and this function is inlined twice per DirectionalShadow. The driver translates
+    // all of them at a program's first draw whichever one runs: on a UHD 620 the sun's
+    // shadow was most of what every lit program cost to finish (2026-11-27,
+    // FZE_DRAWCOST). The branches now only choose the tent's arguments; the same
+    // tent with the same arguments is taken as before.
+    vec2  tuv = p.xy;
+    float tlayer = float(l), tref = ref, tR = 2.5;   // the plain filter (u_ShadowFilter 1, or no hardening)
+    int   tpairs = 4;
+    if (u_ShadowFilter == 0) {
+        tR = 1.0;
+        tpairs = 2;
+    } else if (hardening && u_ShadowFilter >= 2) {
+        // Contact hardening: the blockers' depth, then a penumbra as wide as the sun
+        // makes it at that distance.
+        vec2 texel = 1.0 / vec2(textureSize(u_ShadowDepth, 0).xy);
+        float blockers = 0.0, found = 0.0;
+        const float kSearch = 5.0;                                   // texels
+        for (int i = 0; i < 12; ++i) {
+            // A fixed Vogel spiral: the same twelve everywhere (no noise).
+            float r = sqrt((float(i) + 0.5) / 12.0) * kSearch;
+            float a = float(i) * 2.39996323;
+            float d = texture(u_ShadowDepth, vec3(p.xy + vec2(cos(a), sin(a)) * r * texel, float(l))).r;
+            if (d < ref) { blockers += d; found += 1.0; }
+        }
+        if (found < 0.5) return 1.0;                                  // nothing above it nearby: lit
+        float gap = (ref - blockers / found) * mPerDepth;            // metres below the blockers
+        float penTexels = max(gap * u_SunPenumbra / mPerTexel, 1.0);
+        if (penTexels <= 3.5) {
+            tR = max(penTexels, 1.0);
+        } else {
+            // Wider than this level's tent: a coarser level, where it fits.
+            int up = min(int(ceil(log2(penTexels / 3.5))), u_SunLevels - 1 - l);
+            int lc = l + up;
+            mat4 vc;
+            vec4 ic;
+            FZE_SunLevelAt(lc, vc, ic);
+            if (ic.w < 0.5) {
+                tR = 3.5;
+            } else {
+                vec3 Pc = P + N * (ic.x * (0.75 + slope * 0.75));
+                vec3 pc = (vc * vec4(Pc, 1.0)).xyz * 0.5 + 0.5;
+                tuv = pc.xy;
+                tlayer = float(lc);
+                tref = pc.z - (ic.x * slope * 0.35 + ic.x * 0.25) / max(ic.y, 1e-4);
+                tR = clamp(penTexels / exp2(float(up)), 1.0, 3.5);
+            }
+        }
     }
-    if (found < 0.5) return 1.0;                                  // nothing above it nearby: lit
-    float gap = (ref - blockers / found) * mPerDepth;            // metres below the blockers
-    float penTexels = max(gap * u_SunPenumbra / mPerTexel, 1.0);
-    if (penTexels <= 3.5) return FZE_TentShadow(p.xy, float(l), ref, max(penTexels, 1.0), 4);
-    // Wider than this level's tent: a coarser level, where it fits.
-    int up = min(int(ceil(log2(penTexels / 3.5))), u_SunLevels - 1 - l);
-    int lc = l + up;
-    mat4 vc;
-    vec4 ic;
-    FZE_SunLevelAt(lc, vc, ic);
-    if (ic.w < 0.5) return FZE_TentShadow(p.xy, float(l), ref, 3.5, 4);
-    vec3 Pc = P + N * (ic.x * (0.75 + slope * 0.75));
-    vec3 pc = (vc * vec4(Pc, 1.0)).xyz * 0.5 + 0.5;
-    float refc = pc.z - (ic.x * slope * 0.35 + ic.x * 0.25) / max(ic.y, 1e-4);
-    return FZE_TentShadow(pc.xy, float(lc), refc, clamp(penTexels / exp2(float(up)), 1.0, 3.5), 4);
+    return FZE_TentShadow(tuv, tlayer, tref, tR, tpairs);
 }
 
 // The moving bodies' shadow at P (1 none). Its softness is the sun's: the penumbra a metre
@@ -217,6 +239,10 @@ float FZE_SunLevelsShadow(vec3 worldPos, vec3 N, vec3 L) {
         inside = FZE_SunInside(p);
         if (inside <= 0.0) return 1.0;
     }
+    // ⚠️ TWO CALLS, ON PURPOSE. Folding these two into a loop whose length is known only per
+    // pixel kept one copy in the program and saved 0.4 s at its first draw - and cost 13 ms
+    // a frame on a UHD 620 (GPU Lit 27 -> 40 ms on B1 and B2, 2026-11-27): a loop of texture
+    // reads under per-pixel control is far slower here than two straight copies.
     float s = FZE_SunLevelShadow(l, vp, info, worldPos, N, L, ndl, true);
     if (inside >= 1.0) return s;
     // Near the edge: the next level's answer blended in, so no seam crosses the ground.

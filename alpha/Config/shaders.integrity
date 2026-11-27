@@ -17,15 +17,15 @@ a1497c751b8613d1	CloudResolve.frag
 7e3323d3c1cadba4	CloudShadow.frag
 69fb500c81ca3304	Composite.frag
 1cb3d668f669fb8a	ContactShadow.frag
-989432c189ab49b2	Debug.frag
-24b7bda093821688	Debug.vert
+cd06f12db1c8e671	Debug.frag
+9f69e457e1387a75	Debug.vert
 da059bdc43a6630e	DecalCluster.comp
 7376e3f9cb04bdb9	Depth.frag
 9d7274272605b2cd	Depth.vert
 b6ce44b797dcac90	DepthCutout.frag
 3e7f6252b9e82b94	DepthFade.frag
 ca1b164a7cda741c	DepthOfField.frag
-200bead056ed260e	Foliage.frag
+384ae10aaeb2cb92	Foliage.frag
 2c8b6d0eb9bc3590	Foliage.vert
 edd089865dc0547f	FoliageArgs.comp
 76e5243a006d5742	FoliageBake.frag
@@ -52,7 +52,7 @@ f0aa15e80af00d6c	lib/Finite.glsl
 857d001d82391f0f	lib/Fog.glsl
 2cc0595aaf0864dc	lib/Foliage.glsl
 2bb67a9f1fc2bd59	lib/IBLSky.glsl
-acbf406f5cf86bd3	lib/Lighting.glsl
+63b3e9696bb625de	lib/Lighting.glsl
 0115a3ea2c9d697b	lib/Lights.glsl
 8465f6713c39f2c6	lib/LodFade.glsl
 2c0f71553b0a8ff1	lib/Material.glsl
@@ -60,7 +60,7 @@ acbf406f5cf86bd3	lib/Lighting.glsl
 835072e59201c0b5	lib/PrecipLight.glsl
 73db0d2d96398df3	lib/Retro.glsl
 1761a9e82ac0db6c	lib/Ripples.glsl
-06642ed1fe4b280f	lib/Shadows.glsl
+d742d25e17af91f0	lib/Shadows.glsl
 60c534abe1bc9a71	lib/SimpleLight.glsl
 10a50618393f285e	lib/Skinning.glsl
 da144d39fb8985cd	lib/SkySample.glsl
@@ -76,7 +76,7 @@ d33b44bff45f2c16	lib/Wind.glsl
 f53e0dc3af3d7bbc	LightCluster.comp
 c27c1c2f77706e82	Lightning.frag
 942e5c6785256a23	Lightning.vert
-6b54abb78c884b2e	Lit.frag
+70141d59f958e12f	Lit.frag
 068cbe824088ac78	Lit.vert
 83e4f0b141439fed	LocalExposure.frag
 2324683e00b01a2a	MeshEdges.frag
@@ -105,7 +105,7 @@ eb6c23251d4e6a02	SSAOBlur.frag
 a41683ed48703074	SSRFilter.frag
 a8857e9d8528220a	SSRTemporal.frag
 1b1f1c37d2c1a3a6	SunVisibility.frag
-3883915d13b6a1d3	Terrain.frag
+1d453a73d73f9437	Terrain.frag
 6313d3710ce11765	Terrain.vert
 7272f8c19df8ed9e	TerrainPack.frag
 31145dc0f6a6648b	TerrainSimple.frag

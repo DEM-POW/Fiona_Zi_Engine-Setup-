@@ -127,6 +127,11 @@ void main() {
     // ⚠️ FOUR NAMED LAYERS, NOT AN ARRAY OF THEM. An array of structures written and read through
     // a loop's index goes out to scratch memory on an integrated GPU, at every pixel.
     vec4 w = texture(u_Splat, uv);
+    // FZE_EXP_*: measuring switches, set only by FZE_SHADERDEFINES for one run (docs/BENCHMARKS.md).
+#ifdef FZE_EXP_ONE_LAYER
+    w = vec4(1.0, 0.0, 0.0, 0.0);   // the first layer alone, from one projection
+    bw = vec3(0.0, 1.0, 0.0);
+#endif
     const Layer none = Layer(vec3(0.0), 0.0, vec3(0.0), 0.0, 0.0);
     Layer L0 = none, L1 = none, L2 = none, L3 = none;
     float k0 = -1.0, k1 = -1.0, k2 = -1.0, k3 = -1.0;
@@ -170,11 +175,15 @@ void main() {
 
     // ---- marks on it: craters, scorches, blood (lib/Decals.glsl) ------------------
     float metallic = 0.0;
+#ifndef FZE_EXP_NO_DECALS
     FZE_ApplyDecals(P, Ng, gl_FragCoord.xy, albedo, N, roughness, metallic);
+#endif
 
     // ---- rain on it, as on everything else ---------------------------------------
     float coatStrength = 0.0, coatRoughness = 1.0;
+#ifndef FZE_EXP_NO_WEATHER
     FZE_ApplyWeather(P, Ng, metallic, -1.0, albedo, roughness, N, coatStrength, coatRoughness);
+#endif
 
     // The editor's view modes, the same answers Lit.frag gives, so the ground
     // does not stay lit while everything on it shows its base colour.
@@ -197,13 +206,19 @@ void main() {
 
     vec2 screenTerms = vec2(1.0);
     if (u_HasSSAO == 1) screenTerms = texture(u_SSAOMap, gl_FragCoord.xy / u_ScreenSize).rg;
+#ifdef FZE_EXP_FLAT
+    vec3 color = albedo;   // no lighting at all: what is left is the ground's own cost
+#else
     vec3 color = FZE_LightSurface(surf, P, N, V, albedo, metallic, 0.5, ao, screenTerms, 1.0, vec3(0.0));
 #endif
+#endif
 
+#ifndef FZE_EXP_NO_FOG
     color = FZE_ApplyFog(color,
                          FZE_FogRadiance(pow(max(u_FogColor, 0.0), vec3(2.2)), P - u_CameraPos),
                          FZE_FogDepth(u_CameraPos, P));
     color = FZE_ApplyAerial(color, gl_FragCoord.xy / max(u_ScreenSize, vec2(1.0)), length(P - u_CameraPos));
+#endif
 
     // ---- the editor's brush, drawn on the ground itself --------------------------
     if (u_Brush.w > 0.0) {
